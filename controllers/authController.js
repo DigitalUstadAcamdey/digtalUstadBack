@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const AppError = require("./../utils/appError");
 const catchAsync = require("./../utils/catchAsync");
+const { OAuth2Client } = require("google-auth-library");
 
 const createToken = (user) => {
   const token = jwt.sign({ id: user.id }, "your_jwt_secret", {
@@ -29,6 +30,7 @@ exports.loginUser = (req, res, next) => {
     });
   })(req, res, next);
 };
+
 exports.signUpUser = catchAsync(async (req, res, next) => {
   const { username, password, email, passwordConfirm } = req.body;
   console.log("before Check");
@@ -66,56 +68,55 @@ exports.signUpUser = catchAsync(async (req, res, next) => {
   res.status(201).json({ message: "تم التسجيل بنجاح" });
 });
 
-exports.loginWithGithub = async (req, res) => {
-  let user;
-  try {
-    user = await User.findOne({ githubId: req.user.githubId });
+const client = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  "http://localhost:5000/api/auth/google/callback"
+);
 
-    if (!user) {
-      user = await User.create({
-        githubId: req.user.githubId,
-        username: req.user.username,
-        thumbnail: req.user.thumbnail,
-      });
-    }
-    const token = createToken(user);
-    res.status(200).json({
-      message: "success",
-      token,
-      user: {
-        username: user.username,
-        thumbnail: user.thumbnail,
-      },
-    });
-  } catch (error) {
-    console.error("Error during GitHub callback:", error);
-    res.redirect("/");
-  }
-};
+exports.redirectGoogle = catchAsync(async (req, res, next) => {
+  const redirectUrl = client.generateAuthUrl({
+    access_type: "offline",
+    scope: ["profile", "email"],
+  });
+  res.redirect(redirectUrl);
+});
 
-exports.loginWithGoogle = async (req, res) => {
-  try {
-    const user = await User.findOne({ googleId: req.user.googleId });
-    if (!user) {
-      user = await User.create({
-        googleId: req.user.googleId,
-        username: req.user.username,
-        thumbnail: req.user.thumbnail,
-        email: req.user.email,
-      });
-    }
-    const token = createToken(user);
-    res.status(200).json({
-      message: "success",
-      token: token,
-      user: {
-        username: user.username,
-        thumbnail: user.thumbnail,
-      },
-    });
-  } catch (error) {
-    console.log(error);
+exports.loginWithGoogle = catchAsync(async (req, res, next) => {
+  const code = req.query.code;
+
+  if (!code) {
+    return next(new AppError("Authorization code is missing", 400));
   }
-};
+  // change code => token
+  const { tokens } = await client.getToken(code);
+  client.setCredentials(tokens);
+
+  const ticket = await client.verifyIdToken({
+    idToken: tokens.id_token,
+    audience: process.env.GOOGLE_CLIENT_ID,
+  });
+  const payload = ticket.getPayload();
+
+  let user = await User.findOne({ googleId: payload.sub });
+
+  if (!user) {
+    // إذا لم يكن المستخدم موجودًا، أنشئ حسابًا جديدًا
+    user = await User.create({
+      googleId: payload.sub,
+      username: payload.name,
+      email: payload.email,
+      photo: payload.picture,
+    });
+  }
+
+  const token = createToken(user);
+
+  res.status(201).json({
+    message: "succse",
+    token: token,
+    user,
+  });
+});
 
 exports.prmission = passport.authenticate("jwt", { session: false }); //for add permissions with jwt

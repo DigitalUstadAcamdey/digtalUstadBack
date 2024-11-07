@@ -3,7 +3,7 @@ const {
   loginUser,
   signUpUser,
   prmission,
-  loginWithGithub,
+  redirectGoogle,
   loginWithGoogle,
 } = require("../controllers/authController");
 const passport = require("passport");
@@ -14,30 +14,10 @@ const router = express.Router();
 router.post("/login", loginUser);
 router.post("/signup", signUpUser);
 
-// توجيه المستخدم إلى GitHub للمصادقة
-router.get(
-  "/github",
-  passport.authenticate("github", {
-    scope: ["user:email"],
-  })
-);
+router.get("/google", redirectGoogle);
+
+router.get("/google/callback", loginWithGoogle);
 
 
-router.get(
-  "/github/callback",
-  passport.authenticate("github", { failureRedirect: "/register" }),
-  loginWithGithub
-);
-
-router.get(
-  "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
-
-router.get(
-  "/google/callback",
-  passport.authenticate("google", { failureRedirect: "/login" }),
-  loginWithGoogle
-);
 
 module.exports = router;
