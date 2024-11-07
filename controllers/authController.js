@@ -5,6 +5,8 @@ const jwt = require("jsonwebtoken");
 const AppError = require("./../utils/appError");
 const catchAsync = require("./../utils/catchAsync");
 const { OAuth2Client } = require("google-auth-library");
+const crypto = require("crypto");
+const sendEmail = require("./../utils/sendEmils");
 
 const createToken = (user) => {
   const token = jwt.sign({ id: user.id }, "your_jwt_secret", {
@@ -31,41 +33,23 @@ exports.loginUser = (req, res, next) => {
   })(req, res, next);
 };
 
-exports.signUpUser = catchAsync(async (req, res, next) => {
-  const { username, password, email, passwordConfirm } = req.body;
-  console.log("before Check");
-  // التحقق من صحة المدخلات
-  if (!username || !password || !email || !passwordConfirm) {
-    return next(new AppError("يرجى إدخال جميع الحقول", 400));
-  }
+exports.signup = catchAsync(async (req, res, next) => {
+  const { username, email, password, passwordConfirm } = req.body;
 
-  console.log("after Check");
-
-  // تحقق من وجود المستخدم
-  const existingUser = await User.findOne({ username });
-  if (existingUser) {
-    return next(new AppError("اسم المستخدم موجود بالفعل", 404));
-  }
-
-  // تشفير كلمة المرور
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  // إنشاء مستخدم جديد
-  const newUser = new User({
-    username,
-    email,
-    password: hashedPassword,
+  const user = await User.create({
+    username: username,
+    email: email,
+    password: password,
+    passwordConfirm: passwordConfirm,
+    role: "student",
   });
 
-  // حفظ المستخدم في قاعدة البيانات
-  await newUser.save();
-
-  const token = createToken(newUser);
-
-  // استجابة نجاح
-  res.status(201).json({ message: "تم التسجيل بنجاح", token, user: newUser });
-
-  res.status(201).json({ message: "تم التسجيل بنجاح" });
+  const token = createToken(user);
+  res.status(200).json({
+    message: "نجاح",
+    token,
+    user,
+  });
 });
 
 const client = new OAuth2Client(
@@ -120,3 +104,63 @@ exports.loginWithGoogle = catchAsync(async (req, res, next) => {
 });
 
 exports.prmission = passport.authenticate("jwt", { session: false }); //for add permissions with jwt
+
+exports.forgetPassword = catchAsync(async (req, res, next) => {
+  const email = req.body.email;
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+
+  const resetToken = crypto.randomBytes(32).toString("hex");
+
+  const resetPasswordExpires = Date.now() + 3600000;
+
+  user.resetPasswordToken = resetToken;
+  user.resetPasswordExpires = resetPasswordExpires;
+  await user.save({ validateBeforeSave: false });
+
+  const resetLink = `${process.env.URL}/api/auth/reset-password/${resetToken}`;
+
+  const options = {
+    email,
+    subject: "Reset Password",
+    message: `You are receiving this email because you (or someone else) have requested a password reset. Please click on the following link to complete the process: \n\n${resetLink}\n\nIf you did not request a password reset, please ignore this email and your password will remain unchanged.\n`,
+  };
+
+  try {
+    console.log("first");
+    await sendEmail(options);
+    res.status(200).json({ message: "Reset password email sent" });
+  } catch (error) {
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+    return next(new AppError("Failed to send email", 500));
+  }
+});
+exports.resetPassword = catchAsync(async (req, res, next) => {
+  const resetToken = req.params.resetToken;
+  const { password, passwordConfirm } = req.body;
+  if (password !== passwordConfirm) {
+    return next(new AppError("Passwords do not match", 400));
+  }
+  const user = await User.findOne({
+    resetPasswordToken: resetToken,
+    resetPasswordExpires: { $gt: Date.now() },
+  });
+  if (!user) {
+    return next(new AppError("Token expired or invalid", 400));
+  }
+  user.password = password;
+  user.passwordConfirm = undefined;
+  user.resetPasswordToken = undefined; // مسح الرمز بعد التغيير
+  user.resetPasswordExpires = undefined; // مسح تاريخ الصلاحية
+
+  const token = createToken(user);
+
+  await user.save({ validateBeforeSave: false });
+
+  res.status(200).json({ message: "Password reset successful", token });
+});

@@ -1,5 +1,4 @@
 const express = require("express");
-const bodyParser = require("body-parser");
 const session = require("express-session");
 const cookieParser = require("cookie-parser");
 const flash = require("connect-flash");
@@ -21,17 +20,8 @@ const app = express();
 // allowed body
 app.use(express.json());
 
-
 //set static folder
 app.use("*", express.static("public"));
-
-// body-parser middleware
-
-// parse application/x-www-form-urlencoded
-app.use(bodyParser.urlencoded({ extended: false }));
-
-// parse application/json
-app.use(bodyParser.json());
 
 //session middleware
 
@@ -45,18 +35,6 @@ app.use(cookieParser());
 //setup express flash
 
 app.use(flash());
-
-app.use((req, res, next) => {
-  res.locals.success = req.flash("success");
-  res.locals.error = req.flash("error");
-  next();
-});
-
-//express-masseages middleware
-app.use(function (req, res, next) {
-  res.locals.messages = require("express-messages")(req, res);
-  next();
-});
 
 //express-validator middleware
 // app.use(expressValidator());
