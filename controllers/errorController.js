@@ -61,24 +61,24 @@ const sendErrorUser = (err, res) => {
 };
 
 module.exports = (err, req, res, next) => {
-  // console.log(err.stack);
 
+  
   err.statusCode = err.statusCode || 500;
   err.status = err.status || "error";
 
-  if (process.env.NODE_ENV === "development") {
     sendErrorDev(err, res);
-  } else if (process.env.NODE_ENV === "production") {
-    let error = { ...err };
-    console.log("the eror :", error._message);
-    if (err.name === "CastError") error = handleCastErrorDB(error);
-    if (err.code === 11000) error = handleDuplicateErrorDB(error);
-    if (error._message === "Validation failed")
-      error = handleValidationErrorDB(error);
-    if (error.name === "JsonWebTokenError") error = handleJWTError(error);
-    if (error.name === "TokenExpiredError")
-      error = handleJWTExpiredError(error);
+  
+  // else if (process.env.NODE_ENV === "production") {
+  //   let error = { ...err };
+  //   console.log("the eror :", error._message);
+  //   if (err.name === "CastError") error = handleCastErrorDB(error);
+  //   if (err.code === 11000) error = handleDuplicateErrorDB(error);
+  //   if (error._message === "Validation failed")
+  //     error = handleValidationErrorDB(error);
+  //   if (error.name === "JsonWebTokenError") error = handleJWTError(error);
+  //   if (error.name === "TokenExpiredError")
+  //     error = handleJWTExpiredError(error);
 
-    sendErrorUser(error, res);
-  }
+  //   sendErrorUser(error, res);
+  // }
 };

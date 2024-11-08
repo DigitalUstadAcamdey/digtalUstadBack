@@ -61,6 +61,12 @@ const userSchema = new Schema({
     enum: ["student", "teacher", "admin"],
     default: "student",
   },
+  publishedCourses: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Course",
+    },
+  ],
   lastLogin: {
     type: Date,
     default: Date.now,
@@ -69,13 +75,15 @@ const userSchema = new Schema({
     type: Boolean,
     default: true,
   },
-  resetPasswordExpires:{
+  resetPasswordExpires: {
     type: Date,
-    default: null
+    default: null,
+    select: false,
   },
-  resetPasswordToken:{
+  resetPasswordToken: {
     type: String,
-    default: null
+    default: null,
+    select: false,
   },
   createdAt: { type: Date, default: Date.now },
 });

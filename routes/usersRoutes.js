@@ -12,7 +12,7 @@ const { prmission } = require("../controllers/authController");
 const router = express.Router();
 
 // for normal users student or teacher
-router.post("/updateMe", prmission, updateMe);
+router.patch("/updateMe", prmission, updateMe);
 router.delete("/deleteMe", prmission, deleteMe);
 
 //for admin

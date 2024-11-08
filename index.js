@@ -1,12 +1,8 @@
 const express = require("express");
 const session = require("express-session");
-const cookieParser = require("cookie-parser");
-const flash = require("connect-flash");
 const passport = require("passport");
 const localStrategy = require("./config/passportLocal");
 const jwtStrategy = require("./config/passportJWT");
-const gitHubStrategy = require("./config/passportGitHub");
-const googleStrategy = require("./config/passportGoogle");
 const AppError = require("./utils/appError");
 const globalError = require("./controllers/errorController");
 
@@ -14,6 +10,8 @@ const globalError = require("./controllers/errorController");
 
 const authRoutes = require("./routes/authRoutes");
 const usersRoutes = require("./routes/usersRoutes");
+const courseRoutes = require("./routes/courseRoutes");
+
 
 const app = express();
 
@@ -29,12 +27,9 @@ app.use(
   session({ secret: "your-secret", resave: false, saveUninitialized: true })
 );
 
-//cookie-parser middleware
-app.use(cookieParser());
 
-//setup express flash
 
-app.use(flash());
+
 
 //express-validator middleware
 // app.use(expressValidator());
@@ -42,8 +37,6 @@ app.use(flash());
 passport.initialize();
 localStrategy(passport);
 jwtStrategy(passport);
-gitHubStrategy(passport);
-googleStrategy(passport);
 
 //setup passport middleware
 app.use(passport.initialize());
@@ -53,6 +46,8 @@ app.use(passport.session());
 //defined routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/courses", courseRoutes);
+
 
 //defined 404 middleware (page not found)
 app.all("*", (req, res, next) => {

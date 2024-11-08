@@ -7,10 +7,11 @@ const catchAsync = require("./../utils/catchAsync");
 const { OAuth2Client } = require("google-auth-library");
 const crypto = require("crypto");
 const sendEmail = require("./../utils/sendEmils");
+const { promisify } = require("util");
 
 const createToken = (user) => {
   const token = jwt.sign({ id: user.id }, "your_jwt_secret", {
-    expiresIn: "1h",
+    expiresIn: "4h",
   });
   return token;
 };
@@ -103,7 +104,40 @@ exports.loginWithGoogle = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.prmission = passport.authenticate("jwt", { session: false }); //for add permissions with jwt
+exports.prmission = catchAsync(async (req, res, next) => {
+  let token;
+  if (req.headers.authorization) {
+    token = req.headers.authorization.split(" ")[1];
+  }
+  if (!token) {
+    return next(new AppError("Not authorized to access this route", 401));
+  }
+  const decoded = await promisify(jwt.verify)(token, "your_jwt_secret");
+
+  const user = await User.findById(decoded.id);
+
+  // in next time add change password after and return un unauthorized msg
+
+  if (!user) {
+    return next(new AppError("Invalid token", 401));
+  }
+  req.user = user;
+  next();
+}); //for add permissions with jwt
+
+exports.restrictTo = (...roles) => {
+  return (req, res, next) => {
+    // `roles` is an array of roles allowed to access the route, e.g., ['admin', 'lead-guide']
+    if (!roles.includes(req.user.role)) {
+      // If the user's role is not in the allowed roles array, send a forbidden error
+      return next(
+        new AppError("You do not have permission to access this route", 403)
+      );
+    }
+    // If the user's role is in the allowed roles array, proceed to the next middleware or route handler
+    next();
+  };
+};
 
 exports.forgetPassword = catchAsync(async (req, res, next) => {
   const email = req.body.email;
