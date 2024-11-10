@@ -9,6 +9,63 @@ const crypto = require("crypto");
 const sendEmail = require("./../utils/sendEmils");
 const { promisify } = require("util");
 
+//upload img for users
+const multer = require("multer");
+const sharp = require("sharp");
+const cloudinary = require("./../config/cloudinary");
+
+const multerStorage = multer.memoryStorage();
+const multerFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image")) {
+    cb(null, true);
+  } else {
+    cb(new AppError("Not an imag please uplaod only image ", 400), false);
+  }
+};
+
+const upload = multer({
+  storage: multerStorage,
+  fileFilter: multerFilter,
+});
+
+exports.uploadImageUser = upload.single("thumbnail");
+
+exports.uploadUsingClodinary = catchAsync(async (req, res, next) => {
+  if (!req.file) {
+    return next(new AppError("Please upload img", 404));
+  }
+
+  // رفع كل صورة إلى Cloudinary والحصول على روابط الصور
+
+  const file = req.file;
+
+  // تعديل حجم الصورة باستخدام Sharp
+  const resizedImageBuffer = await sharp(file.buffer)
+    .resize(500, 500) // تعديل الحجم (مثال 800x800 بكسل)
+    .toBuffer(); // تحويل الصورة المعدلة إلى buffer
+
+  // رفع الصورة إلى Cloudinary
+  const result = await new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { resource_type: "image" },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+    );
+
+    stream.end(resizedImageBuffer);
+  });
+
+  // حفظ الرابط في المصفوفة
+
+  req.body.thumbnail = result.secure_url;
+  next();
+});
+
 const createToken = (user) => {
   const token = jwt.sign({ id: user.id }, "your_jwt_secret", {
     expiresIn: "4h",
@@ -35,15 +92,7 @@ exports.loginUser = (req, res, next) => {
 };
 
 exports.signup = catchAsync(async (req, res, next) => {
-  const { username, email, password, passwordConfirm } = req.body;
-
-  const user = await User.create({
-    username: username,
-    email: email,
-    password: password,
-    passwordConfirm: passwordConfirm,
-    role: "student",
-  });
+  const user = await User.create(req.body);
 
   const token = createToken(user);
   res.status(200).json({
@@ -120,6 +169,9 @@ exports.prmission = catchAsync(async (req, res, next) => {
 
   if (!user) {
     return next(new AppError("Invalid token", 401));
+  }
+  if (decoded.exp < Date.now() / 1000) {
+    return next(new AppError("Token has expired", 401));
   }
   req.user = user;
   next();

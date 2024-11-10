@@ -12,11 +12,18 @@ const authRoutes = require("./routes/authRoutes");
 const usersRoutes = require("./routes/usersRoutes");
 const courseRoutes = require("./routes/courseRoutes");
 
-
 const app = express();
 
 // allowed body
 app.use(express.json());
+
+app.use((req, res, next) => {
+  res.setTimeout(600000, () => {
+    // 3600000=> 1h
+    next(new AppError("Request Timeout", 499)); // أرسل خطأ عند تجاوز المهلة
+  });
+  next();
+});
 
 //set static folder
 app.use("*", express.static("public"));
@@ -26,10 +33,6 @@ app.use("*", express.static("public"));
 app.use(
   session({ secret: "your-secret", resave: false, saveUninitialized: true })
 );
-
-
-
-
 
 //express-validator middleware
 // app.use(expressValidator());
@@ -47,7 +50,6 @@ app.use(passport.session());
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/courses", courseRoutes);
-
 
 //defined 404 middleware (page not found)
 app.all("*", (req, res, next) => {

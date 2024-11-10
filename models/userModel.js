@@ -14,20 +14,20 @@ const userSchema = new Schema({
   email: {
     type: String,
     required: function () {
-      return !this.githubId && !this.googleId; // اجعل البريد الإلكتروني مطلوبًا للتسجيل المحلي فقط
+      return !this.googleId; // اجعل البريد الإلكتروني مطلوبًا للتسجيل المحلي فقط
     },
   },
   password: {
     type: String,
     required: function () {
-      return !this.githubId && !this.googleId; // اجعل كلمة المرور مطلوبة للتسجيل المحلي فقط
+      return !this.googleId; // اجعل كلمة المرور مطلوبة للتسجيل المحلي فقط
     },
     minlength: [6, "كلمة المرور يجب أن تكون على الأقل 6 أحرف"],
   },
   passwordConfirm: {
     type: String,
     required: function () {
-      return !this.githubId && !this.googleId;
+      return !this.googleId;
     },
     validate: {
       validator: function (value) {
@@ -35,11 +35,6 @@ const userSchema = new Schema({
       },
       message: "كلمة السر غير متطابقة",
     },
-  },
-  githubId: {
-    type: String,
-    unique: true,
-    sparse: true,
   },
   googleId: {
     type: String,

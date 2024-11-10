@@ -5,12 +5,23 @@ const courseSchema = new Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
   instructor: { type: Schema.Types.ObjectId, ref: "User", required: true }, // إشارة إلى المدرس
-  // videos: [{ type: Schema.Types.ObjectId, ref: "Video" }], // فيديوهات الدورة
+  videos: [{ type: Schema.Types.ObjectId, ref: "Video", required: true }], // فيديوهات الدورة
   price: { type: Number, default: 0 }, // إذا كانت الدورة مدفوعة
   category: { type: String },
   duration: Number, // مدة الدورة الكاملة
   publishedDate: { type: Date, default: Date.now }, // تاريخ النشر
-  studentsCount: { type: Number, default: 0 }, // عدد الطلاب المسجلين
+  studentsCount: { type: Number, default: 0 },
+  imageCover: String,
+  enrolledStudents: {
+    type: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    default: [],
+  },
+  materials: [
+    {
+      filePath: { type: String, required: true }, // URL للملف
+      fileName: { type: String, required: true }, // اسم الملف الأصلي
+    },
+  ], // عدد الطلاب المسجلين
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

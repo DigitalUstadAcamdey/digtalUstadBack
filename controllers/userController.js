@@ -52,9 +52,6 @@ exports.getMe = catchAsync(async (req, res, next) => {
 
 //for Admins
 exports.getAllUsers = catchAsync(async (req, res, next) => {
-  if (req.user.role !== "admin") {
-    return next(new AppError("ليس لديك الصلاحية للوصول إلى هذه الصفحة", 403));
-  }
   const users = await User.find();
   res.status(200).json({
     message: "success",
