@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
+
 const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
@@ -89,6 +91,59 @@ userSchema.pre("save", async function (next) {
   this.passwordConfirm = undefined;
   next();
 });
+
+userSchema.methods.createPasswordResetToken = function () {
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  this.resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  this.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+  return resetToken;
+};
+
+userSchema.methods.calculateCompletion = function (courseId) {
+  const progress = this.progress.find(
+    (p) => p.course.toString() === courseId.toString()
+  );
+
+  if (!progress) return 0;
+
+  const totalVideos = progress.completedVideos.length;
+  const totalCourseVideos = progress.course.videos.length; // assuming that the course object is populated with videos
+
+  if (totalCourseVideos === 0) return 0;
+
+  const percentage = (totalVideos / totalCourseVideos) * 100;
+  return Math.round(percentage);
+};
+
+// دالة لتحديث التقدم في الكورس
+userSchema.methods.updateProgress = async function (courseId, videoId) {
+  const progress = this.progress.find(
+    (p) => p.course.toString() === courseId.toString()
+  );
+
+  if (!progress) {
+    // إذا لم يكن الطالب قد بدأ الكورس، نقوم بإنشاء سجل جديد
+    this.progress.push({
+      course: courseId,
+      completedVideos: [videoId],
+    });
+  } else {
+    // إذا كان قد بدأ الكورس، نضيف الفيديو الجديد إلى completedVideos
+    if (!progress.completedVideos.includes(videoId)) {
+      progress.completedVideos.push(videoId);
+    }
+  }
+
+  // إعادة حساب نسبة التقدم
+  progress.completionPercentage = this.calculateCompletion(courseId);
+
+  // حفظ التحديثات في قاعدة البيانات
+  await this.save();
+};
 
 const User = mongoose.model("User", userSchema);
 

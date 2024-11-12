@@ -1,11 +1,9 @@
 const passport = require("passport");
 const User = require("../models/userModel");
-const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const AppError = require("./../utils/appError");
 const catchAsync = require("./../utils/catchAsync");
 const { OAuth2Client } = require("google-auth-library");
-const crypto = require("crypto");
 const sendEmail = require("./../utils/sendEmils");
 const { promisify } = require("util");
 
@@ -199,15 +197,12 @@ exports.forgetPassword = catchAsync(async (req, res, next) => {
     return next(new AppError("User not found", 404));
   }
 
-  const resetToken = crypto.randomBytes(32).toString("hex");
-
-  const resetPasswordExpires = Date.now() + 3600000;
-
-  user.resetPasswordToken = resetToken;
-  user.resetPasswordExpires = resetPasswordExpires;
+  const resetToken = user.createPasswordResetToken();
   await user.save({ validateBeforeSave: false });
+  console.log(user);
+  console.log(Date.now());
 
-  const resetLink = `${process.env.URL}/api/auth/reset-password/${resetToken}`;
+  const resetLink = `${process.env.URL}/api/auth/reset-password/${user.resetPasswordToken}`;
 
   const options = {
     email,
@@ -226,6 +221,7 @@ exports.forgetPassword = catchAsync(async (req, res, next) => {
     return next(new AppError("Failed to send email", 500));
   }
 });
+
 exports.resetPassword = catchAsync(async (req, res, next) => {
   const resetToken = req.params.resetToken;
   const { password, passwordConfirm } = req.body;

@@ -16,7 +16,7 @@ exports.updateMe = catchAsync(async (req, res, next) => {
   const user = await User.findByIdAndUpdate(req.user.id, req.body, {
     new: true,
     runValidators: true,
-  });
+  }).select("-password");
   res.status(200).json({
     message: "تم التحديث بنجاح",
     user,
@@ -40,13 +40,25 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
 });
 
 exports.getMe = catchAsync(async (req, res, next) => {
-  const user = await User.findById(req.user.id);
+  const user = await User.findById(req.user.id).select("-password");
   if (!user) {
     return next(new AppError("المستخدم غير موجود", 404));
   }
   res.status(200).json({
     message: "نجاح ",
     user,
+  });
+});
+
+// show all course enrolled
+exports.getEnrolledCourses = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user.id).populate("enrolledCourses");
+  if (!user) {
+    return next(new AppError("المستخدم غير موجود", 404));
+  }
+  res.status(200).json({
+    message: "نجاح ",
+    enrolledCourses: user.enrolledCourses,
   });
 });
 
@@ -65,7 +77,7 @@ exports.getUser = catchAsync(async (req, res, next) => {
     return next(new AppError("ليس لديك الصلاحية للوصول إلى هذه الصفحة", 403));
   }
 
-  const user = await User.findById(req.params.id);
+  const user = await User.findById(req.params.id).select("-password");
   if (!user) {
     return next(new AppError("المستخدم غير موجود", 404));
   }
@@ -76,10 +88,7 @@ exports.getUser = catchAsync(async (req, res, next) => {
 });
 
 exports.createUser = catchAsync(async (req, res, next) => {
-  if (req.user.role !== "admin") {
-    return next(new AppError("ليس لديك الصلاحية للوصول إلى هذه الصفحة", 403));
-  }
-  const newUser = await User.create(req.body);
+  const newUser = await User.create(req.body)
   res.status(201).json({
     message: "تم التسجيل بنجاح",
     user: newUser,

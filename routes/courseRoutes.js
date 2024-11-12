@@ -12,8 +12,14 @@ const {
   deleteVideo,
   unenrollCourse,
   searchCourses,
+  updateProgress,
 } = require("../controllers/courseController");
 const { prmission, restrictTo } = require("../controllers/authController");
+const {
+  addReview,
+  updateReview,
+  deleteReview,
+} = require("../controllers/reviewController");
 
 const router = express.Router();
 
@@ -47,6 +53,15 @@ router
 
 router
   .route("/:courseId/videos/:videoId")
-  .delete(prmission, restrictTo("teacher"), deleteVideo);
+  .delete(prmission, restrictTo("teacher"), deleteVideo)
+  .post(prmission, restrictTo("student"), updateProgress);
+
+// Section Reviews
+
+router
+  .route("/:courseId/reviews/:reviewId")
+  .post(prmission, restrictTo("student"), addReview)
+  .patch(prmission, restrictTo("student"), updateReview)
+  .delete(prmission, restrictTo("admin", "student"), deleteReview);
 
 module.exports = router;

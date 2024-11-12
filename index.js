@@ -11,6 +11,7 @@ const globalError = require("./controllers/errorController");
 const authRoutes = require("./routes/authRoutes");
 const usersRoutes = require("./routes/usersRoutes");
 const courseRoutes = require("./routes/courseRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use(passport.session());
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/courses", courseRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 //defined 404 middleware (page not found)
 app.all("*", (req, res, next) => {

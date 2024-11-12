@@ -211,9 +211,9 @@ exports.unenrollCourse = catchAsync(async (req, res, next) => {
 // search course
 
 exports.searchCourses = catchAsync(async (req, res, next) => {
-  const  query  = req.query.query;
- // استلام نص البحث من المتغير query
-  if (!query ) {
+  const query = req.query.query;
+  // استلام نص البحث من المتغير query
+  if (!query) {
     return next(new AppError("يرجى إدخال نص للبحث", 400));
   }
   const courses = await Course.find({
@@ -233,7 +233,7 @@ exports.searchCourses = catchAsync(async (req, res, next) => {
     courses,
   });
 });
-// review and rating
+
 
 //حذف فيديو
 exports.deleteVideo = catchAsync(async (req, res, next) => {
@@ -261,4 +261,18 @@ exports.deleteVideo = catchAsync(async (req, res, next) => {
   res.status(204).json({
     message: "تم الحذف بنجاح الفيديو بنجاح",
   });
+});
+
+// تحديث التقدم
+exports.updateProgress = catchAsync(async (req, res, next) => {
+  const student = await User.findById(req.user.id);
+
+  if (!student) {
+    return res.status(404).json({ message: "الطالب غير موجود" });
+  }
+
+  // تحديث التقدم في الكورس
+  await student.updateProgress(req.params.courseId, req.params.videoId);
+
+  res.status(200).json({ message: "تم تحديث التقدم بنجاح" });
 });
