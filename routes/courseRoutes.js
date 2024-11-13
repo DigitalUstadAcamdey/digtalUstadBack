@@ -19,6 +19,7 @@ const {
   addReview,
   updateReview,
   deleteReview,
+  setUserId,
 } = require("../controllers/reviewController");
 
 const router = express.Router();
@@ -48,6 +49,7 @@ router
   .route("/enrolled/:courseId")
   .post(prmission, restrictTo("student"), enrollCourse)
   .post(prmission, restrictTo("student"), unenrollCourse);
+//add review
 
 // remove video from course
 
@@ -57,10 +59,12 @@ router
   .post(prmission, restrictTo("student"), updateProgress);
 
 // Section Reviews
+router
+  .route("/reviews/:courseId")
+  .post(prmission, restrictTo("student"), addReview);
 
 router
   .route("/:courseId/reviews/:reviewId")
-  .post(prmission, restrictTo("student"), addReview)
   .patch(prmission, restrictTo("student"), updateReview)
   .delete(prmission, restrictTo("admin", "student"), deleteReview);
 

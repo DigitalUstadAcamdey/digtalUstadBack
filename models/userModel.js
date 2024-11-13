@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
+const Video = require("./videoModel");
 
 const Schema = mongoose.Schema;
 
@@ -125,6 +126,9 @@ userSchema.methods.updateProgress = async function (courseId, videoId) {
     (p) => p.course.toString() === courseId.toString()
   );
 
+  //عمل ture في isCompleted
+  const video = await Video.findById(videoId);
+
   if (!progress) {
     // إذا لم يكن الطالب قد بدأ الكورس، نقوم بإنشاء سجل جديد
     this.progress.push({
@@ -135,6 +139,7 @@ userSchema.methods.updateProgress = async function (courseId, videoId) {
     // إذا كان قد بدأ الكورس، نضيف الفيديو الجديد إلى completedVideos
     if (!progress.completedVideos.includes(videoId)) {
       progress.completedVideos.push(videoId);
+      video.isCompleted = true;
     }
   }
 

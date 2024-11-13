@@ -5,6 +5,9 @@ const localStrategy = require("./config/passportLocal");
 const jwtStrategy = require("./config/passportJWT");
 const AppError = require("./utils/appError");
 const globalError = require("./controllers/errorController");
+const socketIo = require("socket.io");
+const http = require("http");
+const cors = require("cors");
 
 //Routes
 
@@ -12,11 +15,34 @@ const authRoutes = require("./routes/authRoutes");
 const usersRoutes = require("./routes/usersRoutes");
 const courseRoutes = require("./routes/courseRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const faqRoutes = require("./routes/faqRoutes");
 
 const app = express();
 
+//setup socket.io
+
+const server = http.createServer(app);
+
+const io = socketIo(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
+
+app.set("socketio", io);
+
 // allowed body
 app.use(express.json());
+
+//cors
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST", "PATCH", "DELETE"], // حدد طرق HTTP المسموح بها
+    credentials: true, // إذا كنت تستخدم ملفات تعريف الارتباط أو تتعامل مع بيانات اعتماد المستخدم
+  })
+);
 
 app.use((req, res, next) => {
   res.setTimeout(600000, () => {
@@ -52,6 +78,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/faq", faqRoutes);
 
 //defined 404 middleware (page not found)
 app.all("*", (req, res, next) => {

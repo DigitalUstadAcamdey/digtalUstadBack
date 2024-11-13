@@ -88,7 +88,7 @@ exports.getUser = catchAsync(async (req, res, next) => {
 });
 
 exports.createUser = catchAsync(async (req, res, next) => {
-  const newUser = await User.create(req.body)
+  const newUser = await User.create(req.body);
   res.status(201).json({
     message: "تم التسجيل بنجاح",
     user: newUser,
@@ -107,3 +107,5 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
     message: "تم الحذف بنجاح",
   });
 });
+
+

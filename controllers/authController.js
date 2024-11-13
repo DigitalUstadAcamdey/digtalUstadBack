@@ -138,17 +138,18 @@ exports.loginWithGoogle = catchAsync(async (req, res, next) => {
       googleId: payload.sub,
       username: payload.name,
       email: payload.email,
-      photo: payload.picture,
+      thumbnail: payload.picture,
     });
   }
 
   const token = createToken(user);
 
-  res.status(201).json({
-    message: "succse",
-    token: token,
-    user,
-  });
+  res.redirect(`http://localhost:3000/auth/callback?token=${token}`);
+  // res.status(201).json({
+  //   message: "succse",
+  //   token: token,
+  //   user,
+  // });
 });
 
 exports.prmission = catchAsync(async (req, res, next) => {

@@ -28,14 +28,16 @@ reviewSchema.statics.calculateAverageRating = async function (courseId) {
       },
     },
   ]);
+
+  // Update course average rating and number of ratings when a review is added , updated or removed
   if (stats.length > 0) {
     await Course.findByIdAndUpdate(courseId, {
-      avgRating: stats[0].avgRating,
+      avgRatings: stats[0].avgRating,
       numberRatings: stats[0].numRating,
     });
   } else {
     await Course.findByIdAndUpdate(courseId, {
-      avgRating: 4,
+      avgRatings: 4,
       numberRatings: 0,
     });
   }
@@ -44,14 +46,16 @@ reviewSchema.post("save", function () {
   this.constructor.calculateAverageRating(this.course);
 });
 
-reviewSchema.pre("findOneAndDelete", async function (doc) {
-  if (doc) {
-    await doc.constructor.calculateAverageRating(this.course);
-  }
+reviewSchema.pre(/^findOneAnd/, async function (next) {
+  const review = await this.model.findOne(this.getQuery());
+  this.r = review;
+  next();
 });
-reviewSchema.pre("findOneAndUpdate", async function (doc) {
-  if (doc) {
-    await doc.constructor.calculateAverageRating(this.course);
+
+// post-hook: يتم تنفيذه بعد تنفيذ عمليات `findOneAnd`
+reviewSchema.pre(/^findOneAnd/, async function () {
+  if (this.r) {
+    await this.r.constructor.calculateAverageRating(this.r.course);
   }
 });
 

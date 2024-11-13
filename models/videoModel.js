@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
-const videoSchema = new mongoose.Schema({
+const videoSchema = new Schema({
   title: {
     type: String,
     required: true,
@@ -26,6 +26,10 @@ const videoSchema = new mongoose.Schema({
   //   type: mongoose.Schema.Types.ObjectId,
   //   ref: "Course", // إذا كان الفيديو مرتبط بكورس معين
   // },
+  isCompleted: {
+    type: Boolean,
+    default: false, // الفيديو ليس مكتمل
+  },
   createdAt: {
     type: Date,
     default: Date.now,

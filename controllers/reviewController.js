@@ -3,6 +3,10 @@ const catchAsync = require("./../utils/catchAsync");
 const Review = require("./../models/reviewModel");
 const Course = require("../models/courseModel");
 
+exports.setUserId = catchAsync(async (req, res, next) => {
+  req.body.user = req.user.id;
+});
+
 // this for admin only
 exports.getAllReviews = catchAsync(async (req, res, next) => {
   const reviews = await Review.find();
@@ -20,9 +24,12 @@ exports.addReview = catchAsync(async (req, res, next) => {
   if (!course) {
     return next(new AppError("المادة غير موجودة", 404));
   }
+  req.body.course = course._id;
+  req.body.user = req.user.id;
   const review = await Review.create(req.body);
 
   course.reviews.push(review._id);
+  await course.save();
 
   res.status(201).json({
     status: "تمت العملية بنجاح",
@@ -52,7 +59,7 @@ exports.deleteReview = catchAsync(async (req, res, next) => {
   if (!review) {
     return next(new AppError("المراجعة غير موجودة", 404));
   }
-  const course = await Course.findOneAndUpdate(req.params.courseId, {
+  const course = await Course.findByIdAndUpdate(req.params.courseId, {
     $pull: { reviews: review._id },
   });
   if (!course) {
