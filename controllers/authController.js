@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const AppError = require("./../utils/appError");
 const catchAsync = require("./../utils/catchAsync");
 const { OAuth2Client } = require("google-auth-library");
-const sendEmail = require("./../utils/sendEmils");
+const Email = require("./../utils/sendEmils");
 const { promisify } = require("util");
 
 //upload img for users
@@ -92,6 +92,9 @@ exports.loginUser = (req, res, next) => {
 exports.signup = catchAsync(async (req, res, next) => {
   const user = await User.create(req.body);
 
+  // TODO: don't forget to implement send Email
+  // await new Email(user);
+
   const token = createToken(user);
   res.status(200).json({
     message: "نجاح",
@@ -145,11 +148,6 @@ exports.loginWithGoogle = catchAsync(async (req, res, next) => {
   const token = createToken(user);
 
   res.redirect(`http://localhost:3000/auth/callback?token=${token}`);
-  // res.status(201).json({
-  //   message: "succse",
-  //   token: token,
-  //   user,
-  // });
 });
 
 exports.prmission = catchAsync(async (req, res, next) => {
@@ -198,22 +196,17 @@ exports.forgetPassword = catchAsync(async (req, res, next) => {
     return next(new AppError("User not found", 404));
   }
 
-  const resetToken = user.createPasswordResetToken();
+  user.createPasswordResetToken();
   await user.save({ validateBeforeSave: false });
-  console.log(user);
+
   console.log(Date.now());
 
-  const resetLink = `${process.env.URL}/api/auth/reset-password/${user.resetPasswordToken}`;
-
-  const options = {
-    email,
-    subject: "Reset Password",
-    message: `You are receiving this email because you (or someone else) have requested a password reset. Please click on the following link to complete the process: \n\n${resetLink}\n\nIf you did not request a password reset, please ignore this email and your password will remain unchanged.\n`,
-  };
+  const resetLink = `${req.protocol}://${req.get(
+    "host"
+  )}/api/auth/reset-password/${user.resetPasswordToken}`;
 
   try {
-    console.log("first");
-    await sendEmail(options);
+    await new Email(user, resetLink).resetPassword();
     res.status(200).json({ message: "Reset password email sent" });
   } catch (error) {
     user.resetPasswordToken = undefined;
