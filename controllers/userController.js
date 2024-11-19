@@ -40,7 +40,9 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
 });
 
 exports.getMe = catchAsync(async (req, res, next) => {
-  const user = await User.findById(req.user.id).select("-password");
+  const user = await User.findById(req.user.id)
+    .select("-password")
+    .populate("publishedCourses");
   if (!user) {
     return next(new AppError("المستخدم غير موجود", 404));
   }
@@ -107,5 +109,3 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
     message: "تم الحذف بنجاح",
   });
 });
-
-

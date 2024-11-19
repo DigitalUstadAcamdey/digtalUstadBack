@@ -20,6 +20,7 @@ const userSchema = new Schema({
       return !this.googleId; // اجعل البريد الإلكتروني مطلوبًا للتسجيل المحلي فقط
     },
   },
+  phoneNumber: String,
   password: {
     type: String,
     required: function () {

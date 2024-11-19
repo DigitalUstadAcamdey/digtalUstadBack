@@ -6,6 +6,7 @@ const courseSchema = new Schema({
   description: { type: String, required: true },
   instructor: { type: Schema.Types.ObjectId, ref: "User", required: true }, // إشارة إلى المدرس
   videos: [{ type: Schema.Types.ObjectId, ref: "Video", required: true }], // فيديوهات الدورة
+  files: [{ type: Schema.Types.ObjectId, ref: "File", required: true }], // ملفات  الدورة
   price: { type: Number, default: 0 }, // إذا كانت الدورة مدفوعة
   category: { type: String },
   duration: Number, // مدة الدورة الكاملة
@@ -16,12 +17,6 @@ const courseSchema = new Schema({
     type: [{ type: Schema.Types.ObjectId, ref: "User" }],
     default: [],
   },
-  materials: [
-    {
-      filePath: { type: String, required: true }, // URL للملف
-      fileName: { type: String, required: true }, // اسم الملف الأصلي
-    },
-  ],
   reviews: [
     {
       type: Schema.Types.ObjectId,
@@ -43,6 +38,23 @@ const courseSchema = new Schema({
 courseSchema.pre("save", function (next) {
   this.updatedAt = Date.now();
   next();
+});
+
+courseSchema.pre(/^findOne/, function () {
+  this.populate([
+    {
+      path: "instructor",
+      select: "username",
+    },
+    {
+      path: "videos",
+      select: "title duration",
+    },
+    {
+      path: "files",
+      select: "filename size",
+    },
+  ]);
 });
 
 courseSchema.methods.updateStudentsCount = async function () {

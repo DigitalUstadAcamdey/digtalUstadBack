@@ -45,7 +45,7 @@ app.use(
 );
 
 app.use((req, res, next) => {
-  res.setTimeout(600000, () => {
+  res.setTimeout(3600000, () => {
     // 3600000=> 1h
     next(new AppError("Request Timeout", 499)); // أرسل خطأ عند تجاوز المهلة
   });

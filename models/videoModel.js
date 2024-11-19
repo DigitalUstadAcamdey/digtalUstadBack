@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
+
 const videoSchema = new Schema({
   title: {
     type: String,
@@ -15,7 +16,8 @@ const videoSchema = new Schema({
     required: true,
   },
   duration: {
-    type: Number, // مدة الفيديو بالثواني أو الدقائق
+    type: Number,
+    // مدة الفيديو بالثواني أو الدقائق
   },
   uploadedBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -36,6 +38,9 @@ const videoSchema = new Schema({
   },
   publishedDate: { type: Date, default: Date.now },
 });
+
+
+
 
 const Video = mongoose.model("Video", videoSchema);
 module.exports = Video;

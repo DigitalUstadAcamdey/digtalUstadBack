@@ -13,6 +13,7 @@ const {
   unenrollCourse,
   searchCourses,
   updateProgress,
+  uploadFilesCourse,
 } = require("../controllers/courseController");
 const { prmission, restrictTo } = require("../controllers/authController");
 const {
@@ -32,9 +33,10 @@ router
     uploadCourseFile,
     uploadCourseImageCover,
     uploadVideosCourse,
+    uploadFilesCourse,
     createCourse
   )
-  .get(prmission, restrictTo("admin"), getAllcourse);
+  .get(getAllcourse);
 
 router.route("/searchCourses").get(searchCourses);
 

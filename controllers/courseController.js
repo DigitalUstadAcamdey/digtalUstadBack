@@ -3,18 +3,23 @@ const catchAsync = require("./../utils/catchAsync");
 const Course = require("./../models/courseModel");
 const APIFeaturs = require("../utils/apiFeaturs");
 const User = require("../models/userModel");
+const Video = require("../models/videoModel");
+const File = require("../models/fileModel");
 
 const multer = require("multer");
 const sharp = require("sharp");
 const cloudinary = require("./../config/cloudinary");
-const Video = require("../models/videoModel");
 
 const multerStorage = multer.memoryStorage();
 
 const multerFilter = (req, file, cb) => {
   if (
     file.mimetype.startsWith("video/") ||
-    file.mimetype.startsWith("image/")
+    file.mimetype.startsWith("image/") ||
+    file.mimetype === "application/pdf" || // ملفات PDF
+    file.mimetype === "application/msword" || // ملفات Word (DOC)
+    file.mimetype ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" // ملفات Word الحديثة (DOCX)
   ) {
     cb(null, true);
   } else {
@@ -33,6 +38,7 @@ const upload = multer({
 exports.uploadCourseFile = upload.fields([
   { name: "imageCover", maxCount: 1 },
   { name: "videos", maxCount: 4 },
+  { name: "files", maxCount: 4 },
 ]);
 //! don't forget to add upload files (pdf files)
 
@@ -47,7 +53,7 @@ exports.uploadCourseImageCover = catchAsync(async (req, res, next) => {
 
   // تعديل حجم الصورة باستخدام Sharp
   const resizedImageBuffer = await sharp(file.buffer)
-    .resize(700, 700)
+    .resize(705, 397)
     .toBuffer();
 
   // رفع الصورة إلى Cloudinary
@@ -90,13 +96,49 @@ exports.uploadVideosCourse = catchAsync(async (req, res, next) => {
         title: `${req.body.title}-${i + 1}`,
         description: req.body.description,
         uploadedBy: req.user.id,
-        format: "mp4",
+        format: result.format,
+        duration: result.duration,
       });
     });
   });
 
   const videos = await Promise.all(videoPromises);
   req.body.videos = videos.map((video) => video._id);
+  req.body.duration = videos.reduce((total, video) => {
+    return total + video.duration;
+  }, 0);
+  next();
+});
+//Upload Files
+
+exports.uploadFilesCourse = catchAsync(async (req, res, next) => {
+  if (!req.files || !req.files.files) {
+    return next(new AppError("لم يتم ��رسال أي ملفات", 400));
+  }
+  const filePromises = req.files.files.map((file) => {
+    return new Promise((resolve, reject) => {
+      const fileName = `${Date.now()}-${file.originalname}`;
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: "course-files", resource_type: "raw", public_id: fileName },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      stream.end(file.buffer);
+    }).then((result) => {
+      return File.create({
+        format: result.format,
+        filename: result.public_id,
+        size: result.bytes,
+        url: result.secure_url,
+        uploadedBy: req.user.id,
+      });
+    });
+  });
+  const files = await Promise.all(filePromises);
+  req.body.files = files.map((file) => file._id);
+
   next();
 });
 
@@ -104,6 +146,17 @@ exports.uploadVideosCourse = catchAsync(async (req, res, next) => {
 exports.createCourse = catchAsync(async (req, res, next) => {
   req.body.instructor = req.user.id;
   const course = await Course.create(req.body);
+
+  const user = await User.findByIdAndUpdate(
+    req.user.id,
+    {
+      $push: { publishedCourses: course._id },
+    },
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
 
   res.status(201).json({
     message: "تم نشر بنجاح",
@@ -233,7 +286,6 @@ exports.searchCourses = catchAsync(async (req, res, next) => {
     courses,
   });
 });
-
 
 //حذف فيديو
 exports.deleteVideo = catchAsync(async (req, res, next) => {
