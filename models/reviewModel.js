@@ -16,6 +16,17 @@ const reviewSchema = new Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+reviewSchema.pre(/^find/, function () {
+  this.populate([
+    {
+      path: "user",
+      select: "username thumbnail",
+    },
+    
+ 
+  ]);
+});
+
 // clculation AvgRating pre save
 reviewSchema.statics.calculateAverageRating = async function (courseId) {
   const stats = await this.aggregate([

@@ -1,8 +1,70 @@
 const User = require("../models/userModel");
 const catchAsync = require("./../utils/catchAsync");
 const AppError = require("./../utils/appError");
+const multer = require("multer");
+const cloudinary = require("./../config/cloudinary");
+const sharp = require("sharp");
 
-//
+// upload files
+const multerStorage = multer.memoryStorage();
+
+const multerFilter = (req, file, cb) => {
+  if (
+    file.mimetype.startsWith("video/") ||
+    file.mimetype.startsWith("image/") ||
+    file.mimetype === "application/pdf" || // ملفات PDF
+    file.mimetype === "application/msword" || // ملفات Word (DOC)
+    file.mimetype ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" // ملفات Word الحديثة (DOCX)
+  ) {
+    cb(null, true);
+  } else {
+    cb(
+      new AppError("يجب أن يكون الملف من نوع فيديو أو ملف أو صورة ", 400),
+      false
+    );
+  }
+};
+
+const upload = multer({
+  storage: multerStorage,
+  fileFilter: multerFilter,
+});
+
+exports.uploadThumbnail = upload.single("thumbnail");
+
+//Uploads a image Cover
+exports.uploadUserThumbnail = catchAsync(async (req, res, next) => {
+  if (!req.file) {
+    return next(new AppError("يرجى تحميل الصورة أولاً", 400));
+  }
+  // رفع كل صورة إلى Cloudinary والحصول على روابط الصور
+
+  const file = req.file;
+
+  // تعديل حجم الصورة باستخدام Sharp
+  const resizedImageBuffer = await sharp(file.buffer)
+    .resize(500, 500)
+    .toBuffer();
+
+  // رفع الصورة إلى Cloudinary
+  const result = await new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { resource_type: "image" },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+    );
+
+    stream.end(resizedImageBuffer);
+  });
+  req.body.thumbnail = result.secure_url;
+  next();
+});
 
 exports.updateMe = catchAsync(async (req, res, next) => {
   if (

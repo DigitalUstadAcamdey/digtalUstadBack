@@ -44,15 +44,20 @@ courseSchema.pre(/^findOne/, function () {
   this.populate([
     {
       path: "instructor",
-      select: "username",
+      select: "username thumbnail",
     },
     {
       path: "videos",
-      select: "title duration",
+      select: "lessonTitle duration url",
     },
     {
       path: "files",
-      select: "filename size",
+      select: "filename size url",
+    },
+    {
+      path: "reviews",
+      select: "user createdAt rating content",
+      options: { sort: { createdAt: -1 } }, // ترتيب التقييمات من ��ديد الى قديم
     },
   ]);
 });

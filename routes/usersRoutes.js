@@ -8,6 +8,8 @@ const {
   deleteUser,
   getEnrolledCourses,
   getMe,
+  uploadThumbnail,
+  uploadUserThumbnail,
 } = require("../controllers/userController");
 const { prmission, restrictTo } = require("../controllers/authController");
 
@@ -15,7 +17,13 @@ const router = express.Router();
 
 // for normal users student or teacher
 router.get("/me", prmission, getMe);
-router.patch("/updateMe", prmission, updateMe);
+router.patch(
+  "/updateMe",
+  prmission,
+  uploadThumbnail,
+  uploadUserThumbnail,
+  updateMe
+);
 router.delete("/deleteMe", prmission, deleteMe);
 
 //section course

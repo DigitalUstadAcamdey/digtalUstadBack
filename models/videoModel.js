@@ -1,9 +1,8 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
-
 const videoSchema = new Schema({
-  title: {
+  lessonTitle: {
     type: String,
     required: true,
   },
@@ -38,9 +37,6 @@ const videoSchema = new Schema({
   },
   publishedDate: { type: Date, default: Date.now },
 });
-
-
-
 
 const Video = mongoose.model("Video", videoSchema);
 module.exports = Video;

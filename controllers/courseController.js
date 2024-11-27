@@ -43,41 +43,92 @@ exports.uploadCourseFile = upload.fields([
 //! don't forget to add upload files (pdf files)
 
 //Uploads a image Cover
-exports.uploadCourseImageCover = catchAsync(async (req, res, next) => {
-  if (!req.files || !req.files.imageCover) {
-    return next(new AppError("يرجى تحميل ملف أولاً", 400));
+exports.requireImageCoverForCreateCourse = catchAsync(
+  async (req, res, next) => {
+    if (!req.files) {
+      console.log(req.files.imageCover[0]);
+      return next(
+        new AppError("يرجى تحميل ملف الصورة المغرة  عند إنشاء الدورة", 400)
+      );
+    }
+
+    next();
   }
-  // رفع كل صورة إلى Cloudinary والحصول على روابط الصور
+);
 
-  const file = req.files.imageCover[0];
+exports.optionalImageCoverForUpdateCourse = catchAsync(
+  async (req, res, next) => {
+    if (!req.file) {
+      return next();
+    }
+    next();
+  }
+);
 
-  // تعديل حجم الصورة باستخدام Sharp
-  const resizedImageBuffer = await sharp(file.buffer)
-    .resize(705, 397)
-    .toBuffer();
+exports.uploadCourseImageCover = catchAsync(async (req, res, next) => {
+  if (req.file) {
+    // رفع كل صورة إلى Cloudinary والحصول على روابط الصور
 
-  // رفع الصورة إلى Cloudinary
-  const result = await new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { resource_type: "image" },
-      (error, result) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(result);
+    const file = req.file;
+
+    // تعديل حجم الصورة باستخدام Sharp
+    const resizedImageBuffer = await sharp(file.buffer)
+      .resize(705, 397)
+      .toBuffer();
+
+    // رفع الصورة إلى Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { resource_type: "image" },
+        (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result);
+          }
         }
-      }
-    );
+      );
 
-    stream.end(resizedImageBuffer);
-  });
-  req.body.imageCover = result.secure_url;
+      stream.end(resizedImageBuffer);
+    });
+    req.body.imageCover = result.secure_url;
+  }
+  if (req.files) {
+    // رفع كل صورة إلى Cloudinary والحصول على روابط الصور
+
+    const file = req.files.imageCover[0];
+
+    // تعديل حجم الصورة باستخدام Sharp
+    const resizedImageBuffer = await sharp(file.buffer)
+      .resize(705, 397)
+      .toBuffer();
+
+    // رفع الصورة إلى Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { resource_type: "image" },
+        (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result);
+          }
+        }
+      );
+
+      stream.end(resizedImageBuffer);
+    });
+    req.body.imageCover = result.secure_url;
+  }
   next();
 });
 //Uploads a videos
 exports.uploadVideosCourse = catchAsync(async (req, res, next) => {
   if (!req.files || !req.files.videos) {
     return next(new AppError("لم يتم إرسال أي فيديوهات", 400));
+  }
+  if (!req.body.lessonTitle) {
+    return next(new AppError("يرجى إدخال عنوان الدرس", 400));
   }
 
   const videoPromises = req.files.videos.map((videoFile, i) => {
@@ -92,9 +143,8 @@ exports.uploadVideosCourse = catchAsync(async (req, res, next) => {
       stream.end(videoFile.buffer);
     }).then((result) => {
       return Video.create({
+        lessonTitle: req.body.lessonTitle,
         url: result.secure_url,
-        title: `${req.body.title}-${i + 1}`,
-        description: req.body.description,
         uploadedBy: req.user.id,
         format: result.format,
         duration: result.duration,
@@ -113,7 +163,7 @@ exports.uploadVideosCourse = catchAsync(async (req, res, next) => {
 
 exports.uploadFilesCourse = catchAsync(async (req, res, next) => {
   if (!req.files || !req.files.files) {
-    return next(new AppError("لم يتم ��رسال أي ملفات", 400));
+    return next(new AppError("لم يتم إرسال أي ملفات", 400));
   }
   const filePromises = req.files.files.map((file) => {
     return new Promise((resolve, reject) => {
@@ -164,11 +214,17 @@ exports.createCourse = catchAsync(async (req, res, next) => {
   });
 });
 
+exports.uploadUpdateImageCover = upload.single("imageCover");
+
 exports.updateCourse = catchAsync(async (req, res, next) => {
-  const course = await Course.findByIdAndUpdate(req.params.courseId, req.body, {
-    new: true,
-    runValidators: true,
-  });
+  const course = await Course.findByIdAndUpdate(
+    req.params.courseId,
+    { $set: req.body },
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
   res.status(200).json({
     message: "تم التحديث بنجاح",
     course,
@@ -261,8 +317,7 @@ exports.unenrollCourse = catchAsync(async (req, res, next) => {
   });
 });
 
-// search course
-
+// search course for admin and student
 exports.searchCourses = catchAsync(async (req, res, next) => {
   const query = req.query.query;
   // استلام نص البحث من المتغير query
@@ -287,31 +342,33 @@ exports.searchCourses = catchAsync(async (req, res, next) => {
   });
 });
 
-//حذف فيديو
-exports.deleteVideo = catchAsync(async (req, res, next) => {
-  const user = await User.findById(req.user.id);
-  if (!user) {
-    return next(new AppError("المستخدم غير موجود", 404));
-  }
-  const course = await Course.findById(req.params.courseId);
-  if (!course) return next(new AppError("المادة غير موجودة", 404));
+//search cours for teachers
+exports.searchCoursesTeachers = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user.id).populate("publishedCourses");
+  if (!user) return next(new AppError("المستخدم غير موجود", 404));
 
-  if (!user.publishedCourses.includes(course.id)) {
-    return next(new AppError("ليس لديك الصلاحية لحذف هذا الفيديو", 403));
+  const query = req.query.query;
+  // استلام نص البحث من المتغير query
+  if (!query) {
+    return next(new AppError("يرجى إدخال نص للبحث", 400));
   }
 
-  const video = await Video.findByIdAndDelete(req.params.videoId);
-  if (!video) return next(new AppError("الفيديو غير موجود", 404));
-
-  if (!course.videos.includes(video._id)) {
-    return next(new AppError("الفيديو غير موجود في هذه الدورة", 400));
+  if (!user.publishedCourses || user.publishedCourses.length === 0) {
+    return next(new AppError("لا توجد كورسات منشورة", 404));
   }
-  course.videos = course.videos.filter(
-    (id) => id.toString() !== video._id.toString()
-  );
-  await course.save();
-  res.status(204).json({
-    message: "تم الحذف بنجاح الفيديو بنجاح",
+
+  const courses = user.publishedCourses.filter((course) => {
+    return course.title.toLowerCase().includes(query.toLowerCase());
+  });
+
+  if (courses.length === 0) {
+    return next(new AppError("لا توجد كورسات تطابق هذا البحث", 404));
+  }
+
+  res.status(200).json({
+    message: "تم العثور على الكورسات بنجاح",
+    results: courses.length,
+    courses,
   });
 });
 
@@ -327,4 +384,243 @@ exports.updateProgress = catchAsync(async (req, res, next) => {
   await student.updateProgress(req.params.courseId, req.params.videoId);
 
   res.status(200).json({ message: "تم تحديث التقدم بنجاح" });
+});
+
+// Videos And Lesson section
+exports.uploadVideoFromLesson = upload.single("video");
+
+// add a midallwear to return a next() or Error
+//for creating a new lesson
+exports.requireVideoForCreateLesson = catchAsync(async (req, res, next) => {
+  if (!req.file) {
+    return next(new AppError("يرجى تحميل ملف الفيديو عند إنشاء الدرس", 400));
+  }
+
+  next();
+});
+exports.optionalVideoForUpdateLesson = catchAsync(async (req, res, next) => {
+  if (!req.file) {
+    return next();
+  }
+  next();
+});
+
+exports.uploadVideoLesson = catchAsync(async (req, res, next) => {
+  if (req.file) {
+    const file = req.file;
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { resource_type: "video" },
+        (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result);
+          }
+        }
+      );
+
+      stream.end(file.buffer);
+    });
+    req.body.url = result.secure_url;
+    req.body.format = result.format;
+    req.body.duration = result.duration;
+  }
+
+  next();
+});
+
+exports.addLesson = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+  if (!user) return next(new AppError("المستخدم غير موجود", 404));
+
+  const course = await Course.findById(req.params.courseId);
+  if (!course) return next(new AppError("المادة غير موجودة", 404));
+
+  if (!user.publishedCourses.includes(course.id)) {
+    return next(new AppError("ليس لديك الصلاحية لإضافة فيديو جديد", 403));
+  }
+  req.body.uploadedBy = user._id;
+
+  const newLesson = await Video.create(req.body);
+  console.log(newLesson);
+
+  course.videos.push(newLesson._id);
+
+  await course.save();
+
+  console.log(course);
+
+  res.status(200).json({
+    status: "success",
+    message: "تمت إضافة الفيديو بنجاح",
+    newLesson,
+  });
+});
+
+exports.updateLesson = catchAsync(async (req, res, next) => {
+  // التحقق من المستخدم
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return next(new AppError("المستخدم غير موجود", 404));
+  }
+
+  // التحقق من الدورة
+  const course = await Course.findOne({
+    _id: req.params.courseId,
+    videos: req.params.videoId,
+  }).populate("videos");
+  if (!course) {
+    return next(new AppError("المادة غير موجودة", 404));
+  }
+
+  // التحقق من الصلاحيات
+  if (!user.publishedCourses.some((courseId) => courseId.equals(course.id))) {
+    return next(
+      new AppError("أنت لا تملك الصلاحية للوصول إلى هذه الدورة", 403)
+    );
+  }
+
+  if (!course.videos.some((video) => video._id.equals(req.params.videoId))) {
+    return next(new AppError("المحاضرة غير موجودة ضمن هذه الدورة", 404));
+  }
+
+  // تحديث الدرس
+  const updatedLesson = await Video.findByIdAndUpdate(
+    req.params.videoId,
+    req.body,
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
+
+  res.status(200).json({
+    message: "تم التحديث بنجاح",
+    updatedLesson,
+  });
+});
+
+//حذف فيديو
+exports.deleteLesson = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return next(new AppError("المستخدم غير موجود", 404));
+  }
+  const course = await Course.findById(req.params.courseId);
+  if (!course) return next(new AppError("المادة غير موجودة", 404));
+
+  if (!user.publishedCourses.includes(course.id)) {
+    return next(new AppError("ليس لديك الصلاحية لحذف هذا المحاضرة", 403));
+  }
+
+  const video = await Video.findById(req.params.videoId);
+  if (!video) return next(new AppError("المحاضرة غير موجود", 404));
+
+  if (!course.videos.some((video) => video._id.equals(video._id))) {
+    return next(new AppError("المحاضرة غير موجود في هذه الدورة", 400));
+  }
+  course.videos = course.videos.filter(
+    (v) => v._id.toString() !== video._id.toString()
+  );
+  await course.save();
+
+  await video.deleteOne();
+  res.status(204).json({
+    message: "تم الحذف  الدرس  بنجاح",
+  });
+});
+
+//Files (pdf or docx ,doc)
+
+exports.uploadFile = upload.single("file");
+
+exports.uploadFileToCloudinary = catchAsync(async (req, res, next) => {
+  if (!req.file) {
+    return next(new AppError("يرجى تحميل الملف أولا", 400));
+  }
+  const file = req.file;
+  const result = await new Promise((resolve, reject) => {
+    const fileName = `${Date.now()}-${file.originalname}`;
+
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: "raw",
+        folder: "course-files",
+        public_id: fileName,
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+    );
+
+    stream.end(file.buffer);
+  });
+
+  req.body.url = result.secure_url;
+  req.body.size = result.bytes;
+
+  next();
+});
+
+exports.addFile = catchAsync(async (req, res, next) => {
+  req.body.uploadedBy = req.user.id;
+
+  const file = await File.create(req.body);
+
+  const course = await Course.findById(req.params.courseId);
+  if (!course) {
+    return next(new AppError("المادة غير موجودة", 404));
+  }
+
+  course.files.push(file._id);
+
+  await course.save();
+
+  res.status(200).json({
+    message: "تمت إضافة الملف بنجاح",
+    file,
+  });
+});
+
+exports.deleteFile = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return next(new AppError("المستخدم غير موجود", 404));
+  }
+
+  const { fileId } = req.params;
+
+  // البحث عن الملف بواسطة الـ id
+  const file = await File.findById(fileId);
+
+  // إذا لم يتم العثور على الملف
+  if (!file) {
+    return next(new AppError("الملف غير موجود", 404));
+  }
+
+  const course = await Course.findById(req.params.courseId);
+  if (!course) return next(new AppError("المادة غير موجودة", 404));
+
+  if (!course.files.some((f) => f._id.equals(file.id))) {
+    return next(new AppError("الملف غير مرتبط بالدورة", 400));
+  }
+
+  // حذف الملف
+  await file.deleteOne();
+
+  course.files = course.files.filter(
+    (f) => f._id.toString() !== file._id.toString()
+  );
+
+  await course.save();
+
+  // استجابة النجاح
+  res.status(200).json({
+    message: "تم حذف الملف بنجاح",
+  });
 });
