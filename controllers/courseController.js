@@ -441,15 +441,13 @@ exports.addLesson = catchAsync(async (req, res, next) => {
     return next(new AppError("ليس لديك الصلاحية لإضافة فيديو جديد", 403));
   }
   req.body.uploadedBy = user._id;
-
+  req.body.courseId = course.id;
   const newLesson = await Video.create(req.body);
-  console.log(newLesson);
 
   course.videos.push(newLesson._id);
+  course.duration += newLesson.duration;
 
   await course.save();
-
-  console.log(course);
 
   res.status(200).json({
     status: "success",
@@ -622,5 +620,27 @@ exports.deleteFile = catchAsync(async (req, res, next) => {
   // استجابة النجاح
   res.status(200).json({
     message: "تم حذف الملف بنجاح",
+  });
+});
+
+// completed video
+exports.isCompleted = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+  if (!user) return next(new AppError("المستخدم غير موجود", 404));
+
+  const video = await Video.findById(req.params.videoId);
+  if (!video) return next(new AppError("الفيديو غير موجود", 404));
+
+  if (video.completedBy.includes(user.id))
+    return next(new AppError("لقد شاهدت الفيديو بالفعل", 404));
+
+  video.completedBy.push(user.id);
+  await video.save();
+
+  await user.updateProgress(video.courseId, video._id);
+
+  res.status(200).json({
+    message: "تم مشاهدة الفيديو بنجاح",
+    lesson: video,
   });
 });

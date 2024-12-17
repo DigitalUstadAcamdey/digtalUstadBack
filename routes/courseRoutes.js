@@ -28,6 +28,7 @@ const {
   uploadUpdateImageCover,
   requireImageCoverForCreateCourse,
   optionalImageCoverForUpdateCourse,
+  isCompleted,
 } = require("../controllers/courseController");
 const { prmission, restrictTo } = require("../controllers/authController");
 const {
@@ -86,7 +87,6 @@ router
   .post(prmission, restrictTo("student"), unenrollCourse);
 //add review
 
-// remove video from course
 router
   .route("/:courseId/videos/:videoId")
   .delete(prmission, restrictTo("teacher"), deleteLesson)
@@ -99,6 +99,12 @@ router
     updateLesson
   )
   .post(prmission, restrictTo("student"), updateProgress);
+
+// update isComplete video
+
+router
+  .route("/:courseId/videos/:videoId/completed")
+  .patch(prmission, restrictTo("student"), isCompleted);
 
 // Section Reviews
 router

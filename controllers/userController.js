@@ -1,6 +1,7 @@
 const User = require("../models/userModel");
 const catchAsync = require("./../utils/catchAsync");
 const AppError = require("./../utils/appError");
+const APIFeaturs = require("./../utils/apiFeaturs");
 const multer = require("multer");
 const cloudinary = require("./../config/cloudinary");
 const sharp = require("sharp");
@@ -104,7 +105,14 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
 exports.getMe = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.user.id)
     .select("-password")
-    .populate("publishedCourses");
+    .populate([
+      {
+        path: "enrolledCourses",
+      },
+      {
+        path: "publishedCourses",
+      },
+    ]);
   if (!user) {
     return next(new AppError("المستخدم غير موجود", 404));
   }
@@ -128,11 +136,21 @@ exports.getEnrolledCourses = catchAsync(async (req, res, next) => {
 
 //for Admins
 exports.getAllUsers = catchAsync(async (req, res, next) => {
-  const users = await User.find();
+  const features = new APIFeaturs(User.find(), req.query)
+    .filter()
+    .sort()
+    .limitFields()
+    .paginate();
+
+  const users = await features.query;
+  const allDocs = await User.countDocuments(); // get All page
+  const totalPages = Math.ceil(allDocs / req.query.limit);
+
   res.status(200).json({
     message: "success",
     result: users.length,
     users: users,
+    totalPages,
   });
 });
 
@@ -169,5 +187,24 @@ exports.deleteUser = catchAsync(async (req, res, next) => {
   }
   res.status(204).json({
     message: "تم الحذف بنجاح",
+  });
+});
+
+exports.updatePassword = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return next(new AppError("المستحدم غير موجود ", 401));
+  }
+  // check if the entered current password is correct
+  if (!(await user.correctPassword(req.body.currentPassword))) {
+    return next(new AppError("كلمة المرور الحالية غير صحيحة ", 401));
+  }
+  // update the password
+  user.password = req.body.password;
+  user.passwordConfirm = req.body.passwordConfirm;
+
+  await user.save();
+  res.status(200).json({
+    message: "تم تحديث بنجاح كلمة السر بنجاح",
   });
 });

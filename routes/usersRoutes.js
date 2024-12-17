@@ -10,6 +10,7 @@ const {
   getMe,
   uploadThumbnail,
   uploadUserThumbnail,
+  updatePassword,
 } = require("../controllers/userController");
 const { prmission, restrictTo } = require("../controllers/authController");
 
@@ -25,6 +26,7 @@ router.patch(
   updateMe
 );
 router.delete("/deleteMe", prmission, deleteMe);
+router.patch("/updatePassword", prmission, updatePassword);
 
 //section course
 router

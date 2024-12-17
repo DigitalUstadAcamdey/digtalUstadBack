@@ -23,14 +23,20 @@ const videoSchema = new Schema({
     ref: "User", // معرف المستخدم الذي رفع الفيديو
     required: true,
   },
-  // courseId: {
-  //   type: mongoose.Schema.Types.ObjectId,
-  //   ref: "Course", // إذا كان الفيديو مرتبط بكورس معين
-  // },
+  courseId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Course", // إذا كان الفيديو مرتبط بكورس معين
+  },
   isCompleted: {
     type: Boolean,
     default: false, // الفيديو ليس مكتمل
   },
+  completedBy: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // المستخدمين الذين أتموا الفيديو
+    },
+  ],
   createdAt: {
     type: Date,
     default: Date.now,

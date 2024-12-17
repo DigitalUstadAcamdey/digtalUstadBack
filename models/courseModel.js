@@ -48,7 +48,7 @@ courseSchema.pre(/^findOne/, function () {
     },
     {
       path: "videos",
-      select: "lessonTitle duration url",
+      select: "lessonTitle duration url isCompleted completedBy",
     },
     {
       path: "files",

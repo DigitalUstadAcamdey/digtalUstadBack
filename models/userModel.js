@@ -53,8 +53,10 @@ const userSchema = new Schema({
     {
       course: { type: Schema.Types.ObjectId, ref: "Course" },
       completedVideos: [{ type: Schema.Types.ObjectId, ref: "Video" }],
+      percentage: { type: Number, default: 0 },
     },
   ],
+
   role: {
     type: String,
     enum: ["student", "teacher", "admin"],
@@ -105,50 +107,48 @@ userSchema.methods.createPasswordResetToken = function () {
   return resetToken;
 };
 
-userSchema.methods.calculateCompletion = function (courseId) {
-  const progress = this.progress.find(
-    (p) => p.course.toString() === courseId.toString()
-  );
-
-  if (!progress) return 0;
-
-  const totalVideos = progress.completedVideos.length;
-  const totalCourseVideos = progress.course.videos.length; // assuming that the course object is populated with videos
-
-  if (totalCourseVideos === 0) return 0;
-
-  const percentage = (totalVideos / totalCourseVideos) * 100;
-  return Math.round(percentage);
-};
-
-// دالة لتحديث التقدم في الكورس
 userSchema.methods.updateProgress = async function (courseId, videoId) {
-  const progress = this.progress.find(
-    (p) => p.course.toString() === courseId.toString()
+  const existingCourse = this.progress.find(
+    (course) => course.course.toString() === courseId.toString()
   );
 
-  //عمل ture في isCompleted
-  const video = await Video.findById(videoId);
-
-  if (!progress) {
-    // إذا لم يكن الطالب قد بدأ الكورس، نقوم بإنشاء سجل جديد
-    this.progress.push({
+  if (existingCourse) {
+    // تحقق إذا كان الفيديو موجودًا مسبقًا
+    if (!existingCourse.completedVideos.includes(videoId)) {
+      existingCourse.completedVideos.push(videoId);
+    }
+  } else {
+    // أضف دورة جديدة إذا لم تكن موجودة
+    const progress = {
       course: courseId,
       completedVideos: [videoId],
-    });
-  } else {
-    // إذا كان قد بدأ الكورس، نضيف الفيديو الجديد إلى completedVideos
-    if (!progress.completedVideos.includes(videoId)) {
-      progress.completedVideos.push(videoId);
-      video.isCompleted = true;
+      percentage: 0,
+    };
+    this.progress.push(progress);
+  }
+  // حساب نسبة التقدم
+
+  const course = await mongoose.model("Course").findById(courseId);
+  if (course && course.videos.length > 0) {
+    // إذا كانت الدورة تحتوي على فيديوهات
+    const courseProgress =
+      existingCourse ||
+      this.progress.find(
+        (course) => course.course.toString() === courseId.toString()
+      );
+
+    if (courseProgress) {
+      courseProgress.percentage =
+        (courseProgress.completedVideos.length / course.videos.length) * 100;
     }
   }
 
-  // إعادة حساب نسبة التقدم
-  progress.completionPercentage = this.calculateCompletion(courseId);
+  await this.save({ validateModifiedOnly: true });
+};
 
-  // حفظ التحديثات في قاعدة البيانات
-  await this.save();
+// تحديث كلمة السر
+userSchema.methods.correctPassword = function (currentPassword) {
+  return bcrypt.compare(currentPassword, this.password);
 };
 
 const User = mongoose.model("User", userSchema);
