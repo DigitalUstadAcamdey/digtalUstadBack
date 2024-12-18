@@ -208,3 +208,41 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
     message: "تم تحديث بنجاح كلمة السر بنجاح",
   });
 });
+
+exports.searchUsers = catchAsync(async (req, res, next) => {
+  const query = req.query.query;
+  // استلام نص البحث من المتغير query
+  if (!query) {
+    return next(new AppError("يرجى إدخال نص للبحث", 400));
+  }
+  const users = await User.find({
+    $or: [
+      { username: { $regex: query, $options: "i" } }, // البحث حسب العنوان
+    ],
+  });
+
+  if (users.length === 0) {
+    return next(new AppError("لا يوجد مستخدمين  يطابقون  هذا البحث", 404));
+  }
+
+  res.status(200).json({
+    message: "تم العثور على المستخدمين  بنجاح",
+    results: users.length,
+    users,
+  });
+});
+
+exports.UpdateStatusUser = catchAsync(async (req, res, next) => {
+  const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true,
+  });
+  if (!user) {
+    return next(new AppError("المستخدم غير موجود", 404));
+  }
+
+  res.status(200).json({
+    message: "تم التحديث بنجاح",
+    user,
+  });
+});

@@ -11,12 +11,15 @@ const {
   uploadThumbnail,
   uploadUserThumbnail,
   updatePassword,
+  searchUsers,
+  UpdateStatusUser,
 } = require("../controllers/userController");
 const { prmission, restrictTo } = require("../controllers/authController");
 
 const router = express.Router();
 
 // for normal users student or teacher
+
 router.get("/me", prmission, getMe);
 router.patch(
   "/updateMe",
@@ -34,6 +37,7 @@ router
   .get(prmission, restrictTo("student"), getEnrolledCourses);
 
 //for admin
+router.route("/searchUsers").get(prmission, restrictTo("admin"), searchUsers);
 router
   .route("/")
   .get(prmission, restrictTo("admin"), getAllUsers)
@@ -41,6 +45,7 @@ router
 router
   .route("/:id")
   .get(prmission, restrictTo("admin"), getUser)
-  .delete(prmission, restrictTo("admin"), deleteUser);
+  .delete(prmission, restrictTo("admin"), deleteUser)
+  .patch(prmission, restrictTo("admin"), UpdateStatusUser);
 
 module.exports = router;
