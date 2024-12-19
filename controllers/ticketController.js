@@ -26,12 +26,13 @@ exports.sendFaq = catchAsync(async (req, res, next) => {
     subject: req.body.subject,
     description: req.body.description,
   });
+  console.log(faq);
 
   //send with socket.io
   const io = req.app.get("socketio");
 
   io.emit("newFaq", {
-    message: "تم إلاضافة ",
+    message: `تم تلقي رسالة من طرف ${user.username}   `,
     faq,
   });
 

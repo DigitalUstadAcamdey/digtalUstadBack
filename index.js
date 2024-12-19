@@ -31,6 +31,13 @@ const io = socketIo(server, {
 });
 
 app.set("socketio", io);
+io.on("connection", (socket) => {
+  console.log("a user connected");
+
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
+  });
+});
 
 // allowed body
 app.use(express.json());
@@ -89,4 +96,4 @@ app.all("*", (req, res, next) => {
 // handle Error
 app.use(globalError);
 
-module.exports = app;
+module.exports = server;
