@@ -47,7 +47,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:3000",
-      "https://e-learning-platform-eosin.vercel.app/",
+      "https://e-learning-platform-eosin.vercel.app",
     ],
     methods: ["GET", "POST", "PATCH", "DELETE"], // حدد طرق HTTP المسموح بها
     credentials: true, // إذا كنت تستخدم ملفات تعريف الارتباط أو تتعامل مع بيانات اعتماد المستخدم
