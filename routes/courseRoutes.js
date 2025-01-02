@@ -37,6 +37,10 @@ const {
   deleteReview,
   setUserId,
 } = require("../controllers/reviewController");
+const {
+  addComment,
+  getCommentsInLesson,
+} = require("../controllers/commentController");
 
 const router = express.Router();
 
@@ -130,5 +134,13 @@ router
 router
   .route("/:courseId/files/:fileId")
   .delete(prmission, restrictTo("teacher"), deleteFile);
+
+// comments section
+
+router
+  .route("/:courseId/lessons/:videoId")
+  .post(prmission, restrictTo("student"), addComment);
+
+router.get("/:videoId/comments", prmission, getCommentsInLesson);
 
 module.exports = router;

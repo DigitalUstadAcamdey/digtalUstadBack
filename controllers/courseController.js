@@ -267,30 +267,31 @@ exports.deleteCourse = catchAsync(async (req, res, next) => {
 
 // تسجيل طالب في الكورس
 exports.enrollCourse = async (req, res, next) => {
-  // don't forget permission midallwear
-
-  //add course to student
-
   const courseId = req.params.courseId;
   const studentId = req.user.id;
 
   const student = await User.findById(studentId);
   if (!student) return next(new AppError("المستخدم غير موجود", 404));
 
+  const course = await Course.findById(courseId);
+  if (!course) return next(new AppError("المادة غير موجودة", 404));
+
   if (student.enrolledCourses.includes(courseId)) {
     return next(new AppError("أنت مسجل بالفعل في هذا الكورس", 400));
   }
 
-  const updatedStudent = await User.findByIdAndUpdate(studentId, {
-    $push: { enrolledCourses: courseId },
-  });
-
-  //add student to course
-  const course = await Course.findById(courseId);
-  if (!course) return next(new AppError("المادة غير موجودة", 404));
+  if (!(student.balance > 0 && student.balance >= course.price)) {
+    return next(new AppError("ليس لديك رصيد كاف للتسجيل في هذا الكورس", 400));
+  }
 
   course.enrolledStudents.push(studentId);
   course.studentsCount += 1;
+
+  await User.findByIdAndUpdate(studentId, {
+    $push: { enrolledCourses: courseId },
+    $inc: { balance: -course.price },
+  });
+  
 
   await course.save();
 

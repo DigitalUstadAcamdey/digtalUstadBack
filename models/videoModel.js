@@ -37,6 +37,12 @@ const videoSchema = new Schema({
       ref: "User", // المستخدمين الذين أتموا الفيديو
     },
   ],
+  comments: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comment",
+    },
+  ],
   createdAt: {
     type: Date,
     default: Date.now,

@@ -56,7 +56,6 @@ const userSchema = new Schema({
       percentage: { type: Number, default: 0 },
     },
   ],
-
   role: {
     type: String,
     enum: ["student", "teacher", "admin"],
@@ -68,6 +67,12 @@ const userSchema = new Schema({
       ref: "Course",
     },
   ],
+  balance: {
+    // الرصيد الذي يمكن من خلاله الشراء
+    type: Number,
+    default: 0, // القيمة الافتراضية للرصيد هي 0
+    min: 0, // تأكد من أن الرصيد لا يكون سالبًا
+  },
   lastLogin: {
     type: Date,
     default: Date.now,

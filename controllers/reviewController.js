@@ -24,6 +24,13 @@ exports.addReview = catchAsync(async (req, res, next) => {
   if (!course) {
     return next(new AppError("المادة غير موجودة", 404));
   }
+  // التحقق مما إذا كان المستخدم قد قام بتقييم الكورس من قبل
+
+  if (
+    course.reviews.some((review) => review.user._id.toString() === req.user.id)
+  ) {
+    return next(new AppError("لقد قمت بتقييم الكورس من قبل ", 403));
+  }
   req.body.course = course._id;
   req.body.user = req.user.id;
   const review = await Review.create(req.body);

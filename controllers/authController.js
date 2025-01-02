@@ -90,6 +90,8 @@ exports.loginUser = (req, res, next) => {
 };
 
 exports.signup = catchAsync(async (req, res, next) => {
+  req.body.role = "student";
+  req.body.balance = 0;
   const user = await User.create(req.body);
 
   // TODO: don't forget to implement send Email

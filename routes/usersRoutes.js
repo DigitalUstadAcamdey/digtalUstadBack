@@ -13,6 +13,7 @@ const {
   updatePassword,
   searchUsers,
   UpdateStatusUser,
+  addBalance,
 } = require("../controllers/userController");
 const { prmission, restrictTo } = require("../controllers/authController");
 
@@ -46,6 +47,7 @@ router
   .route("/:id")
   .get(prmission, restrictTo("admin"), getUser)
   .delete(prmission, restrictTo("admin"), deleteUser)
-  .patch(prmission, restrictTo("admin"), UpdateStatusUser);
+  .patch(prmission, restrictTo("admin"), UpdateStatusUser)
+  .post(prmission, restrictTo("admin"), addBalance);
 
 module.exports = router;

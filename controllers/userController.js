@@ -37,7 +37,7 @@ exports.uploadThumbnail = upload.single("thumbnail");
 //Uploads a image Cover
 exports.uploadUserThumbnail = catchAsync(async (req, res, next) => {
   if (!req.file) {
-    return next(new AppError("يرجى تحميل الصورة أولاً", 400));
+    return next();
   }
   // رفع كل صورة إلى Cloudinary والحصول على روابط الصور
 
@@ -72,9 +72,10 @@ exports.updateMe = catchAsync(async (req, res, next) => {
     req.body.role ||
     req.body.password ||
     req.body.progress ||
-    req.body.enrolledCourses
+    req.body.enrolledCourses ||
+    req.body.balance
   ) {
-    return next(new AppError("هذا النطاق غير مخصص لتحديث هذه ", 400));
+    return next(new AppError("هذا النطاق غير مخصص لتحديث هذه القيم", 400));
   }
   const user = await User.findByIdAndUpdate(req.user.id, req.body, {
     new: true,
@@ -243,6 +244,28 @@ exports.UpdateStatusUser = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     message: "تم التحديث بنجاح",
+    user,
+  });
+});
+
+// ? section balance
+
+exports.addBalance = catchAsync(async (req, res, next) => {
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    {
+      $inc: { balance: req.body.balance },
+    },
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
+  if (!user) {
+    return next(new AppError("المستخدم غير موجود", 404));
+  }
+  res.status(200).json({
+    message: "تم إضافة المبلغ بنجاح",
     user,
   });
 });

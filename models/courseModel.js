@@ -31,6 +31,9 @@ const courseSchema = new Schema({
     default: 4.5,
     set: (val) => Math.round(val * 10) / 10,
   },
+  concepts: {
+    type: [String],
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
