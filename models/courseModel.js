@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { populate } = require("./videoModel");
 const Schema = mongoose.Schema;
 
 const courseSchema = new Schema({
@@ -51,8 +52,17 @@ courseSchema.pre(/^findOne/, function () {
     },
     {
       path: "videos",
-      select: "lessonTitle duration url isCompleted completedBy",
+      select: "lessonTitle duration url isCompleted completedBy comments",
+      populate: {
+        path: "comments",
+        select: "user text replies createdAt",
+        populate: {
+          path: "replies.user",
+          select: "username thumbnail createdAt",
+        },
+      },
     },
+
     {
       path: "files",
       select: "filename size url",

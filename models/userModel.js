@@ -3,6 +3,7 @@ const validator = require("validator");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const Video = require("./videoModel");
+const moment = require("moment");
 
 const Schema = mongoose.Schema;
 
@@ -73,6 +74,13 @@ const userSchema = new Schema({
     default: 0, // القيمة الافتراضية للرصيد هي 0
     min: 0, // تأكد من أن الرصيد لا يكون سالبًا
   },
+  notifications: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "Notification",
+      default: [],
+    },
+  ],
   lastLogin: {
     type: Date,
     default: Date.now,
@@ -94,6 +102,15 @@ const userSchema = new Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+userSchema.pre(/^find/, function () {
+  this.populate([
+    {
+      path: "notifications",
+      options: { sort: { createdAt: -1 } },
+    },
+  ]);
+});
+
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 12);
@@ -107,48 +124,47 @@ userSchema.methods.createPasswordResetToken = function () {
     .createHash("sha256")
     .update(resetToken)
     .digest("hex");
+  this.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes 
+  console.log("resExp", this.resetPasswordExpires);
 
-  this.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
   return resetToken;
 };
 
 userSchema.methods.updateProgress = async function (courseId, videoId) {
-  const existingCourse = this.progress.find(
-    (course) => course.course.toString() === courseId.toString()
-  );
-
-  if (existingCourse) {
-    // تحقق إذا كان الفيديو موجودًا مسبقًا
-    if (!existingCourse.completedVideos.includes(videoId)) {
-      existingCourse.completedVideos.push(videoId);
+  try {
+    // تحقق من وجود الدورة
+    const course = await mongoose.model("Course").findById(courseId);
+    if (!course) {
+      throw new Error("الدورة غير موجودة");
     }
-  } else {
-    // أضف دورة جديدة إذا لم تكن موجودة
-    const progress = {
-      course: courseId,
-      completedVideos: [videoId],
-      percentage: 0,
-    };
-    this.progress.push(progress);
-  }
-  // حساب نسبة التقدم
 
-  const course = await mongoose.model("Course").findById(courseId);
-  if (course && course.videos.length > 0) {
-    // إذا كانت الدورة تحتوي على فيديوهات
-    const courseProgress =
-      existingCourse ||
-      this.progress.find(
-        (course) => course.course.toString() === courseId.toString()
-      );
+    // البحث عن تقدم الدورة الحالية
+    let progress = this.progress.find(
+      (prog) => prog.course.toString() === course._id.toString()
+    );
 
-    if (courseProgress) {
-      courseProgress.percentage =
-        (courseProgress.completedVideos.length / course.videos.length) * 100;
+    if (progress) {
+      // إذا كان المستخدم مسجل مسبقاً، تحديث التقدم
+      if (!progress.completedVideos.includes(videoId)) {
+        progress.completedVideos.push(videoId);
+        progress.percentage =
+          (progress.completedVideos.length / course.videos.length) * 100;
+      }
+    } else {
+      // إذا لم يكن مسجلاً، إضافة تقدم جديد
+      this.progress.push({
+        course: course._id,
+        completedVideos: [videoId],
+        percentage: (1 / course.videos.length) * 100,
+      });
     }
-  }
 
-  await this.save({ validateModifiedOnly: true });
+    // حفظ التعديلات
+    await this.save({ validateModifiedOnly: true });
+  } catch (error) {
+    console.error("خطأ أثناء تحديث التقدم:", error.message);
+    throw error; // إعادة إرسال الخطأ إذا لزم الأمر
+  }
 };
 
 // تحديث كلمة السر

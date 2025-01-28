@@ -2,6 +2,7 @@ const AppError = require("./../utils/appError");
 const catchAsync = require("./../utils/catchAsync");
 const Review = require("./../models/reviewModel");
 const Course = require("../models/courseModel");
+const User = require("../models/userModel");
 
 exports.setUserId = catchAsync(async (req, res, next) => {
   req.body.user = req.user.id;
@@ -24,8 +25,20 @@ exports.addReview = catchAsync(async (req, res, next) => {
   if (!course) {
     return next(new AppError("المادة غير موجودة", 404));
   }
-  // التحقق مما إذا كان المستخدم قد قام بتقييم الكورس من قبل
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return next(new AppError("المستخدم غير موجود", 404));
+  }
 
+  if (
+    !course.enrolledStudents.some(
+      (us) => us._id.toString() === user._id.toString()
+    )
+  ) {
+    return next(new AppError("لا يمكنك تقييم الدورة التي لم تسجيل فيها", 403));
+  }
+
+  // التحقق مما إذا كان المستخدم قد قام بتقييم الكورس من قبل
   if (
     course.reviews.some((review) => review.user._id.toString() === req.user.id)
   ) {

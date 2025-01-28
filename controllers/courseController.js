@@ -5,6 +5,7 @@ const APIFeaturs = require("../utils/apiFeaturs");
 const User = require("../models/userModel");
 const Video = require("../models/videoModel");
 const File = require("../models/fileModel");
+const axios = require("axios");
 
 const multer = require("multer");
 const sharp = require("sharp");
@@ -197,6 +198,11 @@ exports.createCourse = catchAsync(async (req, res, next) => {
   req.body.instructor = req.user.id;
   const course = await Course.create(req.body);
 
+  // تحديث الفيديو الأول وإضافة courseId
+  if (req.body.videos && req.body.videos[0]) {
+    await Video.findByIdAndUpdate(req.body.videos[0], { courseId: course._id });
+  }
+
   const user = await User.findByIdAndUpdate(
     req.user.id,
     {
@@ -287,14 +293,21 @@ exports.enrollCourse = async (req, res, next) => {
   course.enrolledStudents.push(studentId);
   course.studentsCount += 1;
 
-  await User.findByIdAndUpdate(studentId, {
-    $push: { enrolledCourses: courseId },
-    $inc: { balance: -course.price },
-  });
-  
-
   await course.save();
 
+  const updateStudent = await User.findByIdAndUpdate(
+    studentId,
+    {
+      $push: { enrolledCourses: courseId },
+      $inc: { balance: -course.price },
+    },
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
+
+  console.log(updateStudent);
   res.status(200).json({
     message: "تم التسجيل في الدورة بنجاح",
   });
@@ -625,22 +638,58 @@ exports.deleteFile = catchAsync(async (req, res, next) => {
 });
 
 // completed video
+// exports.isCompleted = catchAsync(async (req, res, next) => {
+//   console.log(req.params.videoId)
+//   const user = await User.findById(req.user.id);
+//   if (!user) return next(new AppError("المستخدم غير موجود", 404));
+
+//   const video = await Video.findById(req.params.videoId);
+//   if (!video) return next(new AppError("الفيديو غير موجود", 404));
+
+//   if (video.completedBy.includes(user.id))
+//     return next(new AppError("لقد شاهدت الفيديو بالفعل", 404));
+
+//   video.completedBy.push(user.id);
+//   await video.save();
+
+//   await user.updateProgress(video.courseId, video._id);
+
+//   res.status(200).json({
+//     message: "تم مشاهدة الفيديو بنجاح",
+//     lesson: video,
+//   });
+// });
+
 exports.isCompleted = catchAsync(async (req, res, next) => {
+  const { videoId } = req.params;
+
+  // التحقق من المستخدم
   const user = await User.findById(req.user.id);
   if (!user) return next(new AppError("المستخدم غير موجود", 404));
 
-  const video = await Video.findById(req.params.videoId);
+  // التحقق من الفيديو
+  const video = await Video.findById(videoId);
   if (!video) return next(new AppError("الفيديو غير موجود", 404));
 
-  if (video.completedBy.includes(user.id))
-    return next(new AppError("لقد شاهدت الفيديو بالفعل", 404));
+  // التحقق إذا كان المستخدم قد أكمل الفيديو بالفعل
+  if (video.completedBy.includes(user.id)) {
+    return next(new AppError("لقد شاهدت الفيديو بالفعل", 400));
+  }
 
+  // تحديث الفيديو بإضافة المستخدم إلى قائمة completedBy
   video.completedBy.push(user.id);
   await video.save();
+  console.log(video);
+  // تحديث تقدم المستخدم في الدورة
+  if (!video.courseId) {
+    return next(new AppError("الفيديو لا يحتوي على معرف الدورة", 400));
+  }
 
   await user.updateProgress(video.courseId, video._id);
 
+  // إرسال استجابة النجاح
   res.status(200).json({
+    status: "success",
     message: "تم مشاهدة الفيديو بنجاح",
     lesson: video,
   });

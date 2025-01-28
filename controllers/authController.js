@@ -6,6 +6,7 @@ const catchAsync = require("./../utils/catchAsync");
 const { OAuth2Client } = require("google-auth-library");
 const Email = require("./../utils/sendEmils");
 const { promisify } = require("util");
+const moment = require("moment");
 
 //upload img for users
 const multer = require("multer");
@@ -203,18 +204,16 @@ exports.forgetPassword = catchAsync(async (req, res, next) => {
 
   console.log(Date.now());
 
-  const resetLink = `${req.protocol}://${req.get(
-    "host"
-  )}/api/auth/reset-password/${user.resetPasswordToken}`;
+  const resetLink = `http://localhost:3000/reset-password/${user.resetPasswordToken}`;
 
   try {
     await new Email(user, resetLink).resetPassword();
-    res.status(200).json({ message: "Reset password email sent" });
+    res.status(200).json({ message: "تحقق من رسائل في بريديك الإلكتروني " });
   } catch (error) {
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save({ validateBeforeSave: false });
-    return next(new AppError("Failed to send email", 500));
+    return next(new AppError("فشل في إسترجاع كلمة المرور", 500));
   }
 });
 

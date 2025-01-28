@@ -1,5 +1,6 @@
 const Comment = require("../models/commentModel");
 const Course = require("../models/courseModel");
+const Notification = require("../models/notifcationModel");
 const User = require("../models/userModel");
 const Video = require("../models/videoModel");
 const AppError = require("../utils/appError");
@@ -42,15 +43,44 @@ exports.addComment = catchAsync(async (req, res, next) => {
   if (!video) return next(new AppError("الفيديو غير موجود", 404));
 
   // إنشاء التعليق
-  const comment = await Comment.create(req.body);
+  const newcomment = await Comment.create(req.body);
+  const comment = await Comment.findById(newcomment.id).select(
+    "-course -video -__v"
+  );
 
   video.comments.push(comment._id);
   await video.save();
+  //send with socket.io
+  const io = req.app.get("socketio");
+
+  io.emit("newComment", {
+    message: `تم إضافة تعليق من طرف ${user.username}`,
+    comment,
+    courseImage: course.imageCover,
+    courseId: course.id,
+    user,
+    lessonNumber:
+      course.videos.findIndex((lesson) => lesson.id === video.id) + 1,
+  });
+
+  const notification = await Notification.create({
+    user: course.instructor,
+    courseId: course.id,
+    courseImage: course.imageCover,
+    message: `تم إضافة تعليق من طرف ${user.username}`,
+    lessonNumber:
+      course.videos.findIndex((lesson) => lesson.id === videoId) + 1,
+  });
+  const teacher = await User.findById(course.instructor);
+  teacher.notifications.push(notification);
+  await teacher.save({
+    validateModifiedOnly: true,
+  });
 
   res.status(201).json({
     status: "success",
     message: "تم إضافة التعليق بنجاح",
-    data: { comment },
+    comment,
   });
 });
 
@@ -81,7 +111,7 @@ exports.updateComment = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     message: "تم تعديل التعليق بنجاح",
-    data: { comment },
+    comment,
   });
 });
 
@@ -122,18 +152,66 @@ exports.addReply = catchAsync(async (req, res, next) => {
   const { commentId } = req.params;
   const { text } = req.body;
 
+  const user = await User.findById(req.user.id);
+  if (!user) return next(new AppError("المستخدم غير موجود", 404));
+
   // البحث عن التعليق
-  const comment = await Comment.findById(commentId);
+  const comment = await Comment.findById(commentId).populate({
+    path: "replies",
+    populate: {
+      path: "user",
+    },
+  });
 
   if (!comment) return next(new AppError("التعليق غير موجود", 404));
 
   comment.replies.push({ user: req.user._id, text });
   await comment.save();
 
+  const updatedComment = await Comment.findById(commentId).populate({
+    path: "replies",
+    populate: {
+      path: "user",
+    },
+  });
+
+  const course = await Course.findById(comment.course);
+  if (!course) return next(new AppError("لا توجد هذه المادة", 404));
+
+  //send with socket.io
+  const io = req.app.get("socketio");
+
+  io.emit("newReply", {
+    message: `تم إضافة تعليق من طرف ${user.username}`,
+    comment,
+    courseImage: course.imageCover,
+    courseId: course.id,
+    user,
+    lessonNumber:
+      course.videos.findIndex(
+        (lesson) => lesson.id === comment.video._id.toString()
+      ) + 1,
+  });
+  const student = await User.findById(comment.user);
+  const notification = await Notification.create({
+    user: student,
+    courseId: course,
+    courseImage: course.imageCover,
+    message: ` تم إضافة رد من طرف الأستاذ ${user.username}`,
+    lessonNumber:
+      course.videos.findIndex(
+        (lesson) => lesson.id === comment.video._id.toString()
+      ) + 1,
+  });
+  student.notifications.push(notification);
+  await student.save({
+    validateModifiedOnly: true,
+  });
+
   res.status(201).json({
     status: "success",
     message: "تم إضافة الرد بنجاح",
-    data: { comment },
+    comment: updatedComment,
   });
 });
 
