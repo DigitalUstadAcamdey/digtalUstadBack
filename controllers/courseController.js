@@ -74,7 +74,9 @@ exports.uploadCourseImageCover = catchAsync(async (req, res, next) => {
 
     // تعديل حجم الصورة باستخدام Sharp
     const resizedImageBuffer = await sharp(file.buffer)
-      .resize(705, 397)
+      .resize(705, 397, {
+        fit: "contain",
+      })
       .toBuffer();
 
     // رفع الصورة إلى Cloudinary
@@ -101,7 +103,10 @@ exports.uploadCourseImageCover = catchAsync(async (req, res, next) => {
 
     // تعديل حجم الصورة باستخدام Sharp
     const resizedImageBuffer = await sharp(file.buffer)
-      .resize(705, 397)
+      .resize(705, 397, {
+        fit: "contain",
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
       .toBuffer();
 
     // رفع الصورة إلى Cloudinary
@@ -637,29 +642,6 @@ exports.deleteFile = catchAsync(async (req, res, next) => {
   });
 });
 
-// completed video
-// exports.isCompleted = catchAsync(async (req, res, next) => {
-//   console.log(req.params.videoId)
-//   const user = await User.findById(req.user.id);
-//   if (!user) return next(new AppError("المستخدم غير موجود", 404));
-
-//   const video = await Video.findById(req.params.videoId);
-//   if (!video) return next(new AppError("الفيديو غير موجود", 404));
-
-//   if (video.completedBy.includes(user.id))
-//     return next(new AppError("لقد شاهدت الفيديو بالفعل", 404));
-
-//   video.completedBy.push(user.id);
-//   await video.save();
-
-//   await user.updateProgress(video.courseId, video._id);
-
-//   res.status(200).json({
-//     message: "تم مشاهدة الفيديو بنجاح",
-//     lesson: video,
-//   });
-// });
-
 exports.isCompleted = catchAsync(async (req, res, next) => {
   const { videoId } = req.params;
 
@@ -692,5 +674,30 @@ exports.isCompleted = catchAsync(async (req, res, next) => {
     status: "success",
     message: "تم مشاهدة الفيديو بنجاح",
     lesson: video,
+  });
+});
+
+exports.getCoursesAndCategory = catchAsync(async (req, res, next) => {
+  const courses = await Course.find();
+  //save categories
+  const categorys = [];
+  courses.filter((course) => {
+    if (!categorys.includes(course.category)) {
+      categorys.push(course.category);
+    }
+  });
+  const categorysAndCourses = [];
+  // save category and courses in object
+  categorys.map((category) => {
+    categorysAndCourses.push({
+      category,
+      courses: courses.filter((course) => course.category === category),
+    });
+  });
+
+  res.status(200).json({
+    status: "success",
+    message: "تم الحصول على المادات والأقسام",
+    courses: categorysAndCourses,
   });
 });

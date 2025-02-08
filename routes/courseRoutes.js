@@ -29,6 +29,7 @@ const {
   requireImageCoverForCreateCourse,
   optionalImageCoverForUpdateCourse,
   isCompleted,
+  getCoursesAndCategory,
 } = require("../controllers/courseController");
 const { prmission, restrictTo } = require("../controllers/authController");
 const {
@@ -43,7 +44,8 @@ const {
 } = require("../controllers/commentController");
 
 const router = express.Router();
-
+router.route("/getCategory").get(getCoursesAndCategory);
+///
 router
   .route("/")
   .post(
