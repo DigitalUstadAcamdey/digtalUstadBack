@@ -291,9 +291,10 @@ exports.enrollCourse = async (req, res, next) => {
     return next(new AppError("أنت مسجل بالفعل في هذا الكورس", 400));
   }
 
-  if (!(student.balance > 0 && student.balance >= course.price)) {
+  if (!(student.balance >= 0 && student.balance >= course.price)) {
     return next(new AppError("ليس لديك رصيد كاف للتسجيل في هذا الكورس", 400));
   }
+  
 
   course.enrolledStudents.push(studentId);
   course.studentsCount += 1;
