@@ -75,7 +75,17 @@ app.use("*", express.static("public"));
 //session middleware
 
 app.use(
-  session({ secret: "your-secret", resave: false, saveUninitialized: true })
+  session({
+    secret: process.env.SESSION_SECRET || "your-secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // لازم true مع https
+      sameSite: "none", // ضروري مع دومينات مختلفة
+      maxAge: 24 * 60 * 60 * 1000, // يوم كامل
+    },
+  })
 );
 
 //express-validator middleware
