@@ -9,7 +9,7 @@ const bcrypt = require("bcryptjs");
 
 // cookie config
 const cookieOptions = {
-  expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 ساعة
+  maxAge: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 ساعة
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -95,6 +95,7 @@ exports.loginUser = catchAsync(async (req, res, next) => {
   }
   const token = createToken(user);
   res.cookie("token", token, cookieOptions);
+  console.log("your token is ", token);
   const userResponse = user.toObject ? user.toObject() : { ...user };
   delete userResponse.password;
 
