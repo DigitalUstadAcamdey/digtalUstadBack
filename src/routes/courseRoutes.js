@@ -26,6 +26,8 @@ const {
   updateVideoTitle,
   deleteVideoFromSection,
   getMyCourses,
+  getOnlyTitleAndDescription,
+  getOnlyCoursesIds,
 } = require("../controllers/courseController");
 const { prmission, restrictTo } = require("../controllers/authController");
 const {
@@ -41,6 +43,11 @@ const { setUploads } = require("../utils/uploadVideo");
 
 const router = express.Router();
 router.route("/getCategory").get(getCoursesAndCategory);
+router.route("/ids").get(getOnlyCoursesIds);
+
+router
+  .route("/courseTitleAndDescription/:courseId")
+  .get(getOnlyTitleAndDescription);
 
 router
   .route("/")

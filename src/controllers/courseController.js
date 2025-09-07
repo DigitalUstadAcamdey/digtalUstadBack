@@ -772,3 +772,25 @@ exports.deleteSection = catchAsync(async (req, res, next) => {
 
   res.status(204).json();
 });
+
+// for  daynmic route
+exports.getOnlyTitleAndDescription = catchAsync(async (req, res, next) => {
+  const { courseId } = req.params;
+  const courseWithTitleAndDescription = await Course.findById(courseId)
+    .select("title description")
+    .exec();
+  if (!courseWithTitleAndDescription) {
+    return next(new AppError(`لا توجد كورس تطابق هذا المعرف${courseId}`, 404));
+  }
+  res.status(200).json({
+    message: "تم  جلب الكوررس مع العنوان  والوصف",
+    courses: courseWithTitleAndDescription,
+  });
+});
+exports.getOnlyCoursesIds = catchAsync(async (req, res, next) => {
+  const coursesIds = await Course.find().select("_id").exec();
+  res.status(200).json({
+    message: "تم جلب جميع ال Ids",
+    courses: coursesIds,
+  });
+});
