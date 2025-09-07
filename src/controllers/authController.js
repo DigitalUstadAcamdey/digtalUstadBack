@@ -1,4 +1,3 @@
-const passport = require("passport");
 const User = require("../models/userModel");
 const jwt = require("jsonwebtoken");
 const AppError = require("./../utils/appError");
@@ -6,8 +5,15 @@ const catchAsync = require("./../utils/catchAsync");
 const { OAuth2Client } = require("google-auth-library");
 const Email = require("./../utils/sendEmils");
 const { promisify } = require("util");
-const moment = require("moment");
+const bcrypt = require("bcryptjs");
 
+// cookie config
+const cookieOptions = {
+  expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 ساعة
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+};
 //upload img for users
 const multer = require("multer");
 const sharp = require("sharp");
@@ -73,29 +79,30 @@ const createToken = (user) => {
   return token;
 };
 
-exports.loginUser = (req, res, next) => {
-  passport.authenticate("local", (err, user, info) => {
-    if (err) return next(err);
-    if (!user) {
-      return res.status(400).json({ error: info.message });
-    }
+exports.loginUser = catchAsync(async (req, res, next) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return next(new AppError("يرجى إدخال البريد الإلكتروني وكلمة المرور", 400));
+  }
+  const user = await User.findOne({ email }).select("+password");
 
-    const token = createToken(user);
+  if (!user) {
+    return next(new AppError("البريد الإلكتروني غير مسجل", 400));
+  }
+  const isPasswordCorrect = await bcrypt.compare(password, user.password);
+  if (!isPasswordCorrect) {
+    return next(new AppError("كلمة المرور خاطئة", 400));
+  }
+  const token = createToken(user);
+  res.cookie("token", token, cookieOptions);
+  const userResponse = user.toObject ? user.toObject() : { ...user };
+  delete userResponse.password;
 
-    req.logIn(user, (err) => {
-      if (err) return next(err);
-      res.cookie("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production" ? true : false,
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        maxAge: 24 * 60 * 60 * 1000,
-        // domain: ".onrender.com",
-        // path: "/",
-      });
-      return res.status(200).json({ message: "تم تسجيل الدخول بنجاح", user });
-    });
-  })(req, res, next);
-};
+  res.status(200).json({
+    status: "تم تسجيل الدخول بنجاح",
+    user: userResponse,
+  });
+});
 
 exports.signup = catchAsync(async (req, res, next) => {
   req.body.role = "student";
@@ -106,14 +113,7 @@ exports.signup = catchAsync(async (req, res, next) => {
   // await new Email(user);
 
   const token = createToken(user);
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production" ? true : false,
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    maxAge: 24 * 60 * 60 * 1000,
-    // domain: ".onrender.com",
-    // path: "/",
-  });
+  res.cookie("token", token, cookieOptions);
   res.status(200).json({
     message: "نجاح",
     user,
@@ -123,8 +123,8 @@ exports.signup = catchAsync(async (req, res, next) => {
 exports.logout = catchAsync(async (req, res, next) => {
   res.cookie("token", "", {
     httpOnly: true,
-    secure: false, // فقط على HTTPS في الإنتاج
-    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production" ? true : false,
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     expires: new Date(0), // منتهي الصلاحية
   });
 
@@ -189,10 +189,33 @@ exports.prmission = catchAsync(async (req, res, next) => {
   // if (req.headers.authorization) {
   //   token = req.headers.authorization.split(" ")[1];
   // }
+  console.log("\n🔍 DEBUG /api/users/me:");
+  console.log("📨 Method:", req.method);
+  console.log("🔗 URL:", req.url);
+  console.log("🍪 Cookies:", req.cookies);
+  console.log("📋 Headers:", {
+    authorization: req.headers.authorization,
+    cookie: req.headers.cookie,
+    origin: req.headers.origin,
+    "user-agent": req.headers["user-agent"],
+  });
+  // التحقق من مصدر الطلب
+  const userAgent = req.headers["user-agent"];
+  if (userAgent === "node" || userAgent === "NextJS-Middleware") {
+    console.log(
+      "📡 Request from:",
+      userAgent === "node" ? "Server/Middleware" : "NextJS Middleware"
+    );
+  } else {
+    console.log("🌐 Request from: Browser");
+  }
   // using cookie
+  console.log("Cookies:", req.cookies);
   if (req.cookies?.token) {
     token = req.cookies.token;
   } else if (req.headers.authorization?.startsWith("Bearer")) {
+    console.log("Cookies:", req.headers.authorization);
+
     token = req.headers.authorization.split(" ")[1];
   }
 

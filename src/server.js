@@ -6,5 +6,6 @@ const connectToDb = require("./utils/connectDb");
 connectToDb();
 
 server.listen(port, () => {
+  console.log("ENV :", process.env.NODE_ENV);
   console.log(`listening on port: http://localhost:${port}`);
 });

@@ -1,9 +1,6 @@
-
 const express = require("express");
 const session = require("express-session");
-const passport = require("passport");
-const localStrategy = require("./config/passportLocal");
-const jwtStrategy = require("./config/passportJWT");
+
 const AppError = require("./utils/appError");
 const globalError = require("./controllers/errorController");
 const socketIo = require("socket.io");
@@ -32,8 +29,10 @@ app.use(
       "http://localhost:3000",
       "https://e-learning-platform-eosin.vercel.app",
     ],
-    methods: ["GET", "POST", "PATCH", "DELETE", "PUT"], // حدد طرق HTTP المسموح بها
-    credentials: true, // إذا كنت تستخدم ملفات تعريف الارتباط أو تتعامل مع بيانات اعتماد المستخدم
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+    exposedHeaders: ["Set-Cookie"],
   })
 );
 
@@ -75,31 +74,26 @@ app.use("*", express.static("public"));
 
 //session middleware
 
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "your-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // لازم true مع https
-      sameSite: "none", // ضروري مع دومينات مختلفة
-      maxAge: 24 * 60 * 60 * 1000, // يوم كامل
-    },
-  })
-);
+// app.use(
+//   session({
+//     secret: process.env.SESSION_SECRET || "your-secret",
+//     resave: false,
+//     saveUninitialized: false,
+//     // cookie: {
+//     //   httpOnly: true,
+//     //   secure: process.env.NODE_ENV === "production" ? true : false, // لازم true مع https
+//     //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // ضروري مع دومينات مختلفة
+//     //   maxAge: 24 * 60 * 60 * 1000, // يوم كامل
+//     // },
+//   })
+// );
 
 //express-validator middleware
 // app.use(expressValidator());
 
-passport.initialize();
-localStrategy(passport);
-jwtStrategy(passport);
 
-//setup passport middleware
-app.use(passport.initialize());
-// must setup session passport after setup session appliction
-app.use(passport.session());
+
+
 
 //defined routes
 app.use("/api/auth", authRoutes);

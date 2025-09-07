@@ -104,14 +104,15 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
 });
 
 exports.getMe = catchAsync(async (req, res, next) => {
+ 
   const user = await User.findById(req.user.id)
     .select("-password")
     .populate([
       {
-        path: "enrolledCourses",//for student
+        path: "enrolledCourses", //for student
       },
       {
-        path: "publishedCourses",//for teacher
+        path: "publishedCourses", //for teacher
       },
     ]);
   if (!user) {
