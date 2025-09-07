@@ -85,12 +85,12 @@ exports.loginUser = (req, res, next) => {
     req.logIn(user, (err) => {
       if (err) return next(err);
       res.cookie("token", token, {
-        httpOnly: true,
+        httpOnly: false,
         secure: process.env.NODE_ENV === "production" ? true : false,
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         maxAge: 24 * 60 * 60 * 1000,
-        domain: ".onrender.com",
-        path: "/",
+        // domain: ".onrender.com",
+        // path: "/",
       });
       return res.status(200).json({ message: "تم تسجيل الدخول بنجاح", user });
     });
