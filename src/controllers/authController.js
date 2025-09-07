@@ -85,9 +85,9 @@ exports.loginUser = (req, res, next) => {
     req.logIn(user, (err) => {
       if (err) return next(err);
       res.cookie("token", token, {
-        httpOnly: false,
+        httpOnly: true,
         secure: process.env.NODE_ENV === "production" ? true : false,
-        sameSite: "lax",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         maxAge: 24 * 60 * 60 * 1000,
         // domain: ".onrender.com",
         // path: "/",
@@ -111,8 +111,8 @@ exports.signup = catchAsync(async (req, res, next) => {
     secure: process.env.NODE_ENV === "production" ? true : false,
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     maxAge: 24 * 60 * 60 * 1000,
-    domain: ".onrender.com",
-    path: "/",
+    // domain: ".onrender.com",
+    // path: "/",
   });
   res.status(200).json({
     message: "نجاح",
