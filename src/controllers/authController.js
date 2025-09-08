@@ -9,10 +9,10 @@ const bcrypt = require("bcryptjs");
 
 // cookie config
 const cookieOptions = {
+  httpOnly: false,
+  secure: false,
+  sameSite: "lax",
   maxAge: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 ساعة
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
 };
 //upload img for users
 const multer = require("multer");
