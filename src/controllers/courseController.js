@@ -784,7 +784,7 @@ exports.getOnlyTitleAndDescription = catchAsync(async (req, res, next) => {
   }
   res.status(200).json({
     message: "تم  جلب الكوررس مع العنوان  والوصف",
-    courses: courseWithTitleAndDescription,
+    course: courseWithTitleAndDescription,
   });
 });
 exports.getOnlyCoursesIds = catchAsync(async (req, res, next) => {
