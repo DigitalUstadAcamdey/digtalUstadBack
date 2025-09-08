@@ -28,6 +28,7 @@ app.use(
     origin: [
       "http://localhost:3000",
       "https://e-learning-platform-eosin.vercel.app",
+      "https://www.digitalustadacademy.com",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -90,10 +91,6 @@ app.use("*", express.static("public"));
 
 //express-validator middleware
 // app.use(expressValidator());
-
-
-
-
 
 //defined routes
 app.use("/api/auth", authRoutes);
