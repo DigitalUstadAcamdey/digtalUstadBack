@@ -9,9 +9,9 @@ const bcrypt = require("bcryptjs");
 
 // cookie config
 const cookieOptions = {
-  httpOnly: false,
-  secure: false,
-  sameSite: "lax",
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   maxAge: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 ساعة
 };
 //upload img for users
