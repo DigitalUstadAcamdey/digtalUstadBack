@@ -1,11 +1,16 @@
 const fs = require("fs");
 const multer = require("multer");
-const path = require("path");
+// const path = require("path");
 const axios = require("axios");
 // config multer
+// using in Render Only
+const uploadDir = "/tmp/uploads";
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 const storage = multer.diskStorage({
   destination: (req, file, callback) => {
-    callback(null, path.join(__dirname, "./../", "uploads"));
+    callback(null, uploadDir);
   },
   filename: (req, file, callback) => {
     // إنشاء اسم ملف فريد لمنع تداخل الأسماء
@@ -82,7 +87,7 @@ exports.uploadVideo = async (title, file) => {
       videoDuration,
     };
   } catch (error) {
-    console.error("❌ فشل رفع الفيديو:", err.message);
+    console.error("❌ فشل رفع الفيديو:", error.message);
   } finally {
     fs.unlink(file.path, (err) => {
       if (!err) console.log(`${file.path} was deleted`);
