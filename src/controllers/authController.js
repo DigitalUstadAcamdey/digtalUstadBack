@@ -128,6 +128,8 @@ exports.logout = catchAsync(async (req, res, next) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production" ? true : false,
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    domain: ".digitalustadacademy.com", // ✅ يخلي الكوكي مشترك بين الـ subdomain
+    path: "/",
     expires: new Date(0), // منتهي الصلاحية
   });
 
