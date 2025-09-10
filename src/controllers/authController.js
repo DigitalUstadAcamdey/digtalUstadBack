@@ -186,7 +186,9 @@ exports.loginWithGoogle = catchAsync(async (req, res, next) => {
     maxAge: 24 * 60 * 60 * 1000,
   });
 
-  res.redirect(`http://localhost:3000/auth/callback?token=${token}`);
+  res.redirect(
+    `https://www.digitalustadacademy.com/auth/callback?token=${token}`
+  );
 });
 
 exports.prmission = catchAsync(async (req, res, next) => {
