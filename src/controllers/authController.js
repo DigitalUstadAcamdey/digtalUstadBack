@@ -179,12 +179,7 @@ exports.loginWithGoogle = catchAsync(async (req, res, next) => {
   }
 
   const token = createToken(user);
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production" ? true : false,
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    maxAge: 24 * 60 * 60 * 1000,
-  });
+  res.cookie("token", token, cookieOptions);
 
   res.redirect(
     `https://www.digitalustadacademy.com/auth/callback?token=${token}`
