@@ -79,7 +79,7 @@ exports.uploadVideo = async (title, file) => {
     // deleting file
     fs.unlink(file.path, (err) => {
       console.log(`${file.path} was deleted`);
-    });
+    }); // deleteing bcuase Already Removing in finally step
 
     return {
       videoId,

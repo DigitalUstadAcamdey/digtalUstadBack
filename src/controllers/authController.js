@@ -139,7 +139,7 @@ exports.logout = catchAsync(async (req, res, next) => {
 const client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  "http://localhost:5000/api/auth/google/callback"
+  "https://www.digitalustadacademy.com/api/auth/google/callback"
 );
 
 exports.redirectGoogle = catchAsync(async (req, res, next) => {
