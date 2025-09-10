@@ -273,7 +273,7 @@ exports.forgetPassword = catchAsync(async (req, res, next) => {
 
   console.log(Date.now());
 
-  const resetLink = `http://localhost:3000/reset-password/${user.resetPasswordToken}`;
+  const resetLink = `https://www.digitalustadacademy.com/reset-password/${user.resetPasswordToken}`;
 
   try {
     await new Email(user, resetLink).resetPassword();
