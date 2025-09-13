@@ -7,14 +7,14 @@ module.exports = class Email {
     this.to = user.email;
     this.firstName = user.username;
     this.url = url;
-    this.from = `kasse imad <${process.env.EMAIL_FROM}>`;
+    this.from = `Digital Ustad Academy <${process.env.EMAIL_FROM}>`;
   }
   newTransport() {
     // TODO: don't forget the actual transport
 
     return nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT,
+      port: Number(process.env.EMAIL_PORT),
       auth: {
         user: process.env.EMAIL_USERNAME,
         pass: process.env.EMAIL_PASSWORD,

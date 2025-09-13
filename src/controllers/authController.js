@@ -13,7 +13,7 @@ const cookieOptions = {
   secure: process.env.NODE_ENV === "production",
   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   maxAge: 24 * 60 * 60 * 1000, // 24 ساعة
-  domain: ".digitalustadacademy.com", // ✅ يخلي الكوكي مشترك بين الـ subdomain
+  domain: ".digitalustadacademy.com", // ✅ يخلي الكوكي مشترك بين الـ subdomain  , لازم تستعملها في production
   path: "/",
 };
 //upload img for users
