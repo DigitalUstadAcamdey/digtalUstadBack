@@ -13,8 +13,8 @@ const cookieOptions = {
   secure: process.env.NODE_ENV === "production",
   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   maxAge: 24 * 60 * 60 * 1000, // 24 ساعة
-  domain: ".digitalustadacademy.com", // ✅ يخلي الكوكي مشترك بين الـ subdomain
-  path: "/",
+  // domain: ".digitalustadacademy.com", // ✅ يخلي الكوكي مشترك بين الـ subdomain
+  // path: "/",
 };
 //upload img for users
 const multer = require("multer");
@@ -94,6 +94,14 @@ exports.loginUser = catchAsync(async (req, res, next) => {
   const isPasswordCorrect = await bcrypt.compare(password, user.password);
   if (!isPasswordCorrect) {
     return next(new AppError("كلمة المرور خاطئة", 400));
+  }
+  if (!user.active) {
+    return next(
+      new AppError(
+        "الحساب غير مفعل حاليا، الرجاء التواصل مع الدعم لتفعيله",
+        400
+      )
+    );
   }
   const token = createToken(user);
   res.cookie("token", token, cookieOptions);
@@ -177,7 +185,14 @@ exports.loginWithGoogle = catchAsync(async (req, res, next) => {
       thumbnail: payload.picture,
     });
   }
-
+  if (!user.active) {
+    return next(
+      new AppError(
+        "الحساب غير مفعل حاليا، الرجاء التواصل مع الدعم لتفعيله",
+        400
+      )
+    );
+  }
   const token = createToken(user);
   res.cookie("token", token, cookieOptions);
 
