@@ -73,24 +73,7 @@ app.use((req, res, next) => {
 //set static folder
 app.use("*", express.static("public"));
 
-//session middleware
 
-// app.use(
-//   session({
-//     secret: process.env.SESSION_SECRET || "your-secret",
-//     resave: false,
-//     saveUninitialized: false,
-//     // cookie: {
-//     //   httpOnly: true,
-//     //   secure: process.env.NODE_ENV === "production" ? true : false, // لازم true مع https
-//     //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // ضروري مع دومينات مختلفة
-//     //   maxAge: 24 * 60 * 60 * 1000, // يوم كامل
-//     // },
-//   })
-// );
-
-//express-validator middleware
-// app.use(expressValidator());
 
 //defined routes
 app.use("/api/auth", authRoutes);
