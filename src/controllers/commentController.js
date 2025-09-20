@@ -98,7 +98,7 @@ exports.updateComment = catchAsync(async (req, res, next) => {
   if (!comment) return next(new AppError("التعليق غير موجود", 404));
 
   // التحقق من صلاحية المستخدم
-  if (comment.user.toString() !== req.user._id.toString())
+  if (comment.user._id.toString() !== req.user._id.toString())
     return next(new AppError("ليس لديك الصلاحية لتعديل هذا التعليق", 403));
 
   const video = await Video.findById(videoId);
@@ -128,7 +128,7 @@ exports.deleteComment = catchAsync(async (req, res, next) => {
   if (!comment) return next(new AppError("التعليق غير موجود", 404));
 
   // التحقق من صلاحية المستخدم
-  if (comment.user.toString() !== req.user._id.toString())
+  if (comment.user._id.toString() !== req.user._id.toString())
     return next(new AppError("ليس لديك الصلاحية لحذف هذا التعليق", 403));
 
   const video = await Video.findById(videoId);

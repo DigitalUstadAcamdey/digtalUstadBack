@@ -105,7 +105,7 @@ exports.loginUser = catchAsync(async (req, res, next) => {
   }
   const token = createToken(user);
   res.cookie("token", token, cookieOptions);
-  console.log("your token is ", token);
+
   const userResponse = user.toObject ? user.toObject() : { ...user };
   delete userResponse.password;
 
@@ -203,36 +203,12 @@ exports.loginWithGoogle = catchAsync(async (req, res, next) => {
 
 exports.prmission = catchAsync(async (req, res, next) => {
   let token;
-  // if (req.headers.authorization) {
-  //   token = req.headers.authorization.split(" ")[1];
-  // }
-  console.log("\n🔍 DEBUG /api/users/me:");
-  console.log("📨 Method:", req.method);
-  console.log("🔗 URL:", req.url);
-  console.log("🍪 Cookies:", req.cookies);
-  console.log("📋 Headers:", {
-    authorization: req.headers.authorization,
-    cookie: req.headers.cookie,
-    origin: req.headers.origin,
-    "user-agent": req.headers["user-agent"],
-  });
-  // التحقق من مصدر الطلب
-  const userAgent = req.headers["user-agent"];
-  if (userAgent === "node" || userAgent === "NextJS-Middleware") {
-    console.log(
-      "📡 Request from:",
-      userAgent === "node" ? "Server/Middleware" : "NextJS Middleware"
-    );
-  } else {
-    console.log("🌐 Request from: Browser");
-  }
+
   // using cookie
-  console.log("Cookies:", req.cookies);
+
   if (req.cookies?.token) {
     token = req.cookies.token;
   } else if (req.headers.authorization?.startsWith("Bearer")) {
-    console.log("Cookies:", req.headers.authorization);
-
     token = req.headers.authorization.split(" ")[1];
   }
 
@@ -280,8 +256,6 @@ exports.forgetPassword = catchAsync(async (req, res, next) => {
 
   user.createPasswordResetToken();
   await user.save({ validateBeforeSave: false });
-
-  console.log(Date.now());
 
   const resetLink = `https://www.digitalustadacademy.com/reset-password/${user.resetPasswordToken}`;
 
