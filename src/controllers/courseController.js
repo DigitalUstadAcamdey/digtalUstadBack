@@ -62,10 +62,11 @@ exports.uploadCourseImageCover = catchAsync(async (req, res, next) => {
     // تعديل حجم الصورة باستخدام Sharp
     const resizedImageBuffer = await sharp(file.buffer)
       .resize({
-        width: 705, // أقصى عرض
-        height: 397, // أقصى ارتفاع
-        fit: "inside", // تحافظ على نسبة الصورة الأصلية وتتكيف داخل البوكس
-        withoutEnlargement: true, // لا تكبر الصورة إذا كانت أصغر من هذا الحجم
+        width: 705, // أقصى عرض للكارد
+        height: 397, // أقصى ارتفاع للكارد
+        fit: "cover", // الصورة تمتلئ بالكامل مع قص بسيط إذا لزم
+        position: "center", // مركز الصورة عند القص
+        withoutEnlargement: true, // لا تكبر الصورة إذا كانت أصغر
       })
       .toBuffer();
 
