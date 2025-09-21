@@ -1,9 +1,7 @@
 const mongoose = require("mongoose");
-const validator = require("validator");
+
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const Video = require("./videoModel");
-const moment = require("moment");
 
 const Schema = mongoose.Schema;
 
@@ -175,8 +173,6 @@ userSchema.methods.updateProgress = async function (courseId, videoId) {
     }
     progress.percentage =
       (progress.completedVideos.length / allVideos.length) * 100;
-
-
 
     // حفظ التعديلات
     await this.save({ validateModifiedOnly: true });

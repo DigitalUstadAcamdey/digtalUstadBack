@@ -69,7 +69,7 @@ exports.uploadCourseImageCover = catchAsync(async (req, res, next) => {
     // رفع الصورة إلى Cloudinary
     const result = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
-        { resource_type: "image" },
+        { resource_type: "image", folder: "courses_imgs" },
         (error, result) => {
           if (error) {
             reject(error);
@@ -99,7 +99,7 @@ exports.uploadCourseImageCover = catchAsync(async (req, res, next) => {
     // رفع الصورة إلى Cloudinary
     const result = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
-        { resource_type: "image" },
+        { resource_type: "image", folder: "courses_imgs" },
         (error, result) => {
           if (error) {
             reject(error);

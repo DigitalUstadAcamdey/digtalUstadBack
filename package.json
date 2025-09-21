@@ -6,7 +6,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start:dev": "cross-env NODE_ENV=development nodemon src/server.js",
     "start:prod": "cross-env NODE_ENV=production node src/server.js",
-    "debug": "ndb src/server.js"
+    "debug": "ndb src/server.js",
+    "create-admin": "node src/scripts/createAdmin.js"
   },
   "author": "imad-kasse",
   "license": "ISC",
