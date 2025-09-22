@@ -1,6 +1,6 @@
 const express = require("express");
 const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
+// const rateLimit = require("express-rate-limit");
 const mongoSanitize = require("express-mongo-sanitize");
 const xss = require("xss-clean");
 const hpp = require("hpp");
@@ -44,10 +44,10 @@ app.use(
   })
 );
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 دقيقة
-  max: 100, // كل IP = 100 طلب فقط
-});
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 دقيقة
+//   max: 100, // كل IP = 100 طلب فقط
+// });
 
 app.use("/api", limiter);
 
