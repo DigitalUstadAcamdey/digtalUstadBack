@@ -1,6 +1,9 @@
 const express = require("express");
-const session = require("express-session");
-
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const mongoSanitize = require("express-mongo-sanitize");
+const xss = require("xss-clean");
+const hpp = require("hpp");
 const AppError = require("./utils/appError");
 const globalError = require("./controllers/errorController");
 const socketIo = require("socket.io");
@@ -21,6 +24,10 @@ const teacherRoutes = require("./routes/teacher.route");
 const couponRoutes = require("./routes/coupon.route");
 
 const app = express();
+//setup socket.io
+const server = http.createServer(app);
+
+app.use(helmet());
 
 //cors
 app.use(
@@ -37,13 +44,22 @@ app.use(
   })
 );
 
-//setup socket.io
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 دقيقة
+  max: 100, // كل IP = 100 طلب فقط
+});
 
-const server = http.createServer(app);
+app.use("/api", limiter);
+
+app.use(express.json({ limit: "10kb" }));
 
 const io = socketIo(server, {
   cors: {
-    origin: "*",
+    origin: [
+      "http://localhost:3000",
+      "https://e-learning-platform-eosin.vercel.app",
+      "https://www.digitalustadacademy.com",
+    ],
     methods: ["GET", "POST"],
   },
 });
@@ -57,10 +73,12 @@ io.on("connection", (socket) => {
   });
 });
 
-// allowed body
-app.use(express.json());
 // allowed cookies
 app.use(cookieParser());
+
+app.use(mongoSanitize()); // ضد NoSQL injection
+app.use(xss()); // ضد XSS
+app.use(hpp());
 
 app.use((req, res, next) => {
   res.setTimeout(3600000, () => {
@@ -72,8 +90,6 @@ app.use((req, res, next) => {
 
 //set static folder
 app.use("*", express.static("public"));
-
-
 
 //defined routes
 app.use("/api/auth", authRoutes);
