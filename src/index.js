@@ -49,7 +49,7 @@ app.use(
 //   max: 100, // كل IP = 100 طلب فقط
 // });
 
-app.use("/api", limiter);
+// app.use("/api", limiter);
 
 app.use(express.json({ limit: "10kb" }));
 
