@@ -199,8 +199,8 @@ exports.addVideoToSection = catchAsync(async (req, res, next) => {
     video: newVideo,
   });
 });
-
-exports.updateVideoTitle = catchAsync(async (req, res, next) => {
+// add update the description
+exports.updateVideoTitleAndDescription = catchAsync(async (req, res, next) => {
   const teacher = await User.findById(req.user.id);
   if (!teacher) return next(new AppError("المستخدم غير موجود", 404));
 
@@ -215,6 +215,7 @@ exports.updateVideoTitle = catchAsync(async (req, res, next) => {
   }
 
   video.lessonTitle = req.body.title;
+  video.description = req.body.description;
   await video.save();
 
   res.status(200).json({

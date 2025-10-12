@@ -28,6 +28,7 @@ const {
   getMyCourses,
   getOnlyTitleAndDescription,
   getOnlyCoursesIds,
+  updateVideoTitleAndDescription,
 } = require("../controllers/courseController");
 const { prmission, restrictTo } = require("../controllers/authController");
 const {
@@ -98,7 +99,7 @@ router.post(
 );
 router
   .route("/:courseId/sections/:sectionId/videos/:videoId")
-  .put(prmission, restrictTo("teacher"), updateVideoTitle)
+  .patch(prmission, restrictTo("teacher"), updateVideoTitleAndDescription)
   .delete(prmission, restrictTo("teacher"), deleteVideoFromSection);
 
 //enrolled in course
