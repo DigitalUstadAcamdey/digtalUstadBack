@@ -11,6 +11,9 @@
     "cron-job": "node src/scripts/cronJob.js"
 
   },
+  "engines": {
+    "node": "22.18.0"
+  },
   "author": "imad-kasse",
   "license": "ISC",
   "description": "",
