@@ -27,7 +27,7 @@ const app = express();
 //setup socket.io
 const server = http.createServer(app);
 
-app.use(helmet());
+// app.use(helmet());
 
 //cors
 app.use(
