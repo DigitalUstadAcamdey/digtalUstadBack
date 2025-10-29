@@ -1,5 +1,5 @@
 # don't forget to add target env like : as env
-FROM node:22.18.0  as production
+FROM node:22.18.0  AS production
 
 WORKDIR /app
 
