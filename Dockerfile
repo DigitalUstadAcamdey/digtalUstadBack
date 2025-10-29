@@ -1,5 +1,5 @@
 # don't forget to add target env like : as env
-FROM node:22:18:00 
+FROM node:22:18
 
 WORKDIR /app
 
