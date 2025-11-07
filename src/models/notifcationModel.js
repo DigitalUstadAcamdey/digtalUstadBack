@@ -12,7 +12,6 @@ const notifcationSchema = new Schema({
     ref: "Course",
     required: true,
   },
-
   courseImage: {
     type: String,
     required: true,
@@ -21,7 +20,6 @@ const notifcationSchema = new Schema({
     type: Number,
     required: true,
   },
-
   message: {
     type: String,
     required: true,
