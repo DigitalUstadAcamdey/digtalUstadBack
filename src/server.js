@@ -4,9 +4,10 @@ const connectToDb = require("./utils/connectDb");
 
 //connect to database
 connectToDb();
-console.log("✅ Running on Node version:", process.version);
 
-server.listen(port, () => {
+
+server.listen(port, '0.0.0.0', () => {
   console.log("ENV :", process.env.NODE_ENV);
+  // add '0.0.0.0' to enable traefik to listen prot :5000
   console.log(`listening on port: http://localhost:${port}`);
 });

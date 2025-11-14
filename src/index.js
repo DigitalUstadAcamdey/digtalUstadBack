@@ -83,7 +83,7 @@ app.use(hpp());
 app.use((req, res, next) => {
   res.setTimeout(3600000, () => {
     // 3600000=> 1h
-    next(new AppError("Request Timeout", 499)); // أرسل خطأ عند تجاوز المهلة
+    next(new AppError("Request Timeout", 499)); 
   });
   next();
 });
@@ -104,7 +104,6 @@ app.use("/api/coupons", couponRoutes);
 
 //defined 404 middleware (page not found)
 app.all("*", (req, res, next) => {
-  // إذا قمنا بتمرير قيمة لnext فإنه يعتبرها رسالة خطأ ويقوم بإعدام جميع البرامج الوسيطة
   next(new AppError(`Can't find ${req.originalUrl} on this server`, 404));
 });
 
