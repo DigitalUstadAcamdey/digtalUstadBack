@@ -1,27 +1,51 @@
-version: "3"
-
 services:
-  e-learning:
-    container_name: e-learninig_api
-
+  digital_ustad_academy:
+    container_name: digital_ustad_academy_api
     build:
       context: .
       target: production
-    ports:
-      - "5000:5000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.digitalustad.rule=Host(`api.localhost`)" # replace the api.localhost with my domain name 'api.digitalustadacaedmy.com'
+      - "traefik.http.services.digitalustad.loadbalancer.server.port=5000"
+      - "traefik.http.routers.digitalustad.entrypoints=web"
+      # - "traefik.http.routers.digitalustad.tls=true"
+      # - "traefik.http.routers.digitalustad.tls.certresolver=selfsigned" # for testing ssl in local type `selfsigned`  or `letsencrypt`
+    networks:
+      - traefik-network
     env_file:
       - ./.env
-    depends_on:
-      - mongo
 
-  mongo:
-    image: mongo
-    restart: always
+  traefik:
+    image: traefik:v3.6
+    container_name: traefik-app
+    command:
+      - "--providers.docker=true"
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      # - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      # - "--certificatesresolvers.letsencrypt.acme.email=contact@digitalustadacademy.com"
+      # - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      # selef certificate
+      # - "--certificatesresolvers.selfsigned.acme.tlschallenge=true"
+      # - "--certificatesresolvers.selfsigned.acme.email=you@example.com"
+      # - "--certificatesresolvers.selfsigned.acme.storage=/letsencrypt/acme.json"
+
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    restart: unless-stopped
     volumes:
-      - mongo-db:/data/db
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/traefik/letsencrypt:/letsencrypt
+    networks:
+      - traefik-network      
+      
 
-volumes:
-  mongo-db:
+networks:
+  traefik-network:
+    external: true      
