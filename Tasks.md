@@ -13,10 +13,19 @@
 
 ---
 
-### 🛑 3. Support Module
+### ✉️ 3. Email Module
+- Add Email Provider Config
+- Implement email sending functionality
+- Setup templates and formatting for system emails
+- Add email queueing (if needed)
+- Add email error handling & logs
+
+---
+
+### 🛑 4. Support Module
 - Disable the **Support** section (Tickets / FAQs)
 
 ---
 
-### 🎥 4. (Optional) Video Upload Optimization
+### 🎥 5. (Optional) Video Upload Optimization
 - Replace full video upload with sending only the **videoId**
