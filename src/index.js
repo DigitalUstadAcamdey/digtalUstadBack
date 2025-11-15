@@ -22,6 +22,7 @@ const commentRoutes = require("./routes/commentRoutes");
 const adminRoutes = require("./routes/admin.route");
 const teacherRoutes = require("./routes/teacher.route");
 const couponRoutes = require("./routes/coupon.route");
+const notificationRoutes = require("./routes/notification.route")
 
 const app = express();
 //setup socket.io
@@ -101,7 +102,7 @@ app.use("/api/comments", commentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/teacher", teacherRoutes);
 app.use("/api/coupons", couponRoutes);
-
+app.use("/api/notification", notificationRoutes)
 //defined 404 middleware (page not found)
 app.all("*", (req, res, next) => {
   // إذا قمنا بتمرير قيمة لnext فإنه يعتبرها رسالة خطأ ويقوم بإعدام جميع البرامج الوسيطة

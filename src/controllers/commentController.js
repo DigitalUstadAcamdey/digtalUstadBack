@@ -62,6 +62,8 @@ exports.addComment = catchAsync(async (req, res, next) => {
     comment,
     courseImage: course.imageCover,
     courseId: course.id,
+    videoId: video.id,
+    sectionId: section.id, //this is the SectionId
     user,
     lessonNumber:
       section.videos.findIndex((lesson) => lesson.id === video.id) + 1, //error in section
@@ -72,6 +74,8 @@ exports.addComment = catchAsync(async (req, res, next) => {
     courseId: course.id,
     courseImage: course.imageCover,
     message: `تم إضافة تعليق من طرف ${user.username}`,
+    videoId: video.id,
+    sectionId: section.id, //this is the SectionId
     lessonNumber:
       section.videos.findIndex((lesson) => lesson.id === video.id) + 1, //error in section
   });
@@ -165,6 +169,9 @@ exports.addReply = catchAsync(async (req, res, next) => {
     populate: {
       path: "user",
     },
+  }).populate({
+    path: "video",
+    select: "sectionId title id"
   });
 
   if (!comment) return next(new AppError("التعليق غير موجود", 404));
@@ -177,7 +184,10 @@ exports.addReply = catchAsync(async (req, res, next) => {
     populate: {
       path: "user",
     },
-  });
+  }).populate({
+    path: "video",
+    select: "sectionId title id"
+  })
 
   const course = await Course.findById(comment.course);
   if (!course) return next(new AppError("لا توجد هذه المادة", 404));
@@ -187,19 +197,31 @@ exports.addReply = catchAsync(async (req, res, next) => {
 
   io.emit("newReply", {
     message: `تم إضافة تعليق من طرف ${user.username}`,
-    comment,
+    user: {
+      id: user.id,
+      username: user.username,
+      thumbnail: user.thumbnail
+    },
+    videoId: comment.video.id,
     courseImage: course.imageCover,
     courseId: course.id,
-    user,
+    comment : {
+      id: comment.id,
+      text: comment.text
+    },
     lessonNumber: 10,
     //   course.videos.findIndex(
     //     (lesson) => lesson.id === comment.video._id.toString()
     //   ) + 1,
   });
   const student = await User.findById(comment.user);
+  console.log('this is the sectionId' , comment.video.sectionId);
+
   const notification = await Notification.create({
     user: student,
     courseId: course,
+    videoId: comment.video.id,
+    sectionId: comment.video.sectionId,
     courseImage: course.imageCover,
     message: ` تم إضافة رد من طرف الأستاذ ${user.username}`,
     lessonNumber: 10,
