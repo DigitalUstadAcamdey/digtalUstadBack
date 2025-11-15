@@ -1,6 +1,6 @@
 const express = require("express");
 const helmet = require("helmet");
-// const rateLimit = require("express-rate-limit");
+const rateLimit = require("express-rate-limit");
 const mongoSanitize = require("express-mongo-sanitize");
 const xss = require("xss-clean");
 const hpp = require("hpp");
@@ -28,7 +28,12 @@ const app = express();
 //setup socket.io
 const server = http.createServer(app);
 
-// app.use(helmet());
+app.use(helmet({
+  // disable some Rules
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // enable the imgs , videos , other files form difreent
+    crossOriginEmbedderPolicy: false, // allow the iframes , videos in Frontend 
+    contentSecurityPolicy: false, // disable the CSP
+}));
 
 //cors
 app.use(
@@ -45,12 +50,28 @@ app.use(
   })
 );
 
-// const limiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 دقيقة
-//   max: 100, // كل IP = 100 طلب فقط
-// });
+// for all routes
+const generalLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hours
+  max: 300, 
+  message: {
+    status: "fail",
+    message: "Too many requests from this IP. Please try again later."
+  },
+});
 
-// app.use("/api", limiter);
+// for login/signup/spam sensitive routes
+const authLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 5, 
+  message: "Too many login attempts. Try again in 5 minutes.",
+});
+
+if (process.env.NODE_ENV === "production") {
+  app.use("/api", generalLimiter);
+  // can add signup , forget and rest password
+  app.use("/api/auth/login", authLimiter);
+}
 
 app.use(express.json({ limit: "10kb" }));
 
@@ -77,7 +98,7 @@ io.on("connection", (socket) => {
 // allowed cookies
 app.use(cookieParser());
 
-app.use(mongoSanitize()); // ضد NoSQL injection
+app.use(mongoSanitize()); // No sql injection
 app.use(xss()); // ضد XSS
 app.use(hpp());
 
