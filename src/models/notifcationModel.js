@@ -28,10 +28,25 @@ const notifcationSchema = new Schema({
     type: Date,
     default: Date.now,
   },
+  isRead: {
+    type: Boolean,
+    default: false,
+    required: true,
+  },
+  sectionId: {
+    type: Schema.Types.ObjectId,
+    ref: "Section",
+    required: true,
+  },
+  videoId: {
+    type: Schema.Types.ObjectId,
+    ref: "Video",
+    required: true,
+  },
 });
 
 notifcationSchema.pre('save',function(){
-    
+
 }
 )
 
