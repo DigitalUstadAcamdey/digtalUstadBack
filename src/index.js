@@ -25,6 +25,10 @@ const couponRoutes = require("./routes/coupon.route");
 const notificationRoutes = require("./routes/notification.route")
 
 const app = express();
+
+app.set('trust proxy', 1); //  for traefik proxy
+
+
 //setup socket.io
 const server = http.createServer(app);
 
