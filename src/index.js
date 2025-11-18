@@ -24,6 +24,10 @@ const teacherRoutes = require("./routes/teacher.route");
 const couponRoutes = require("./routes/coupon.route");
 
 const app = express();
+
+app.set('trust proxy', 1); //  for traefik proxy
+
+
 //setup socket.io
 const server = http.createServer(app);
 

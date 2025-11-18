@@ -13,6 +13,8 @@ services:
       # - "traefik.http.routers.digitalustad.tls.certresolver=selfsigned" # for testing ssl in local type `selfsigned`  or `letsencrypt`
     networks:
       - traefik-network
+    depends_on:
+      - mongo 
     env_file:
       - ./.env
 
@@ -45,7 +47,29 @@ services:
     networks:
       - traefik-network      
       
+  mongo:
+    image: mongo
+    restart: always
+    networks:
+      - traefik-network
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    networks:
+      - traefik-network
+    ports:
+      - 8082:8081  
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+      ME_CONFIG_BASICAUTH_ENABLED: true
+      ME_CONFIG_BASICAUTH_USERNAME: mongoexpressuser
+      ME_CONFIG_BASICAUTH_PASSWORD: mongoexpresspass
 
 networks:
   traefik-network:
-    external: true      
+    external: true
+         
