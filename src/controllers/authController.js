@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const AppError = require("./../utils/appError");
 const catchAsync = require("./../utils/catchAsync");
 const { OAuth2Client } = require("google-auth-library");
-const Email = require("../utils/sendEmails");
+const Email = require("./../utils/sendEmails");
 const { promisify } = require("util");
 const bcrypt = require("bcryptjs");
 
