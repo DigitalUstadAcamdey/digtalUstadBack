@@ -97,10 +97,6 @@ const userSchema = new Schema({
 userSchema.pre(/^findOne/, function () {
   this.populate([
     {
-      path: "notifications",
-      options: { sort: { createdAt: -1 } },
-    },
-    {
       path: "publishedCourses",
       populate: {
         path: "sections",

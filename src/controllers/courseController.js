@@ -326,7 +326,7 @@ exports.getAllcourse = catchAsync(async (req, res, next) => {
     Course.find().populate([
       {
         path: "instructor",
-        select: "-notifications -publishedCourses -password -role -active -balance -enrolledCourses -progress",
+        select: " -publishedCourses -password -role -active -balance -enrolledCourses -progress",
       },
       {
         path: "sections",
