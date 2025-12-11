@@ -6,7 +6,7 @@ services:
       target: production
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.digitalustad.rule=Host(`api.localhost`)" # replace the api.localhost with my domain name 'api.digitalustadacaedmy.com'
+      - "traefik.http.routers.digitalustad.rule=PathPrefix(`/`)" # replace the api.localhost with my domain name 'api.digitalustadacaedmy.com' , the HostRegexp(`{any:.*}`) for running ngrok app
       - "traefik.http.services.digitalustad.loadbalancer.server.port=5000"
       - "traefik.http.routers.digitalustad.entrypoints=web"
       # - "traefik.http.routers.digitalustad.tls=true"
@@ -55,6 +55,8 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - ./mongo-data:/data/db  
 
   mongo-express:
     image: mongo-express

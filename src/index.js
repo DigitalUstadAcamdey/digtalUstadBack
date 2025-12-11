@@ -23,8 +23,14 @@ const adminRoutes = require("./routes/admin.route");
 const teacherRoutes = require("./routes/teacher.route");
 const couponRoutes = require("./routes/coupon.route");
 const notificationRoutes = require("./routes/notification.route")
+const chargilyRoutes = require("./routes/chargily.route");
+const { addWebhook } = require("./controllers/chargily.controller");
+
 
 const app = express();
+
+// for reading req.body
+app.post('/api/chargily/webhook', express.raw({ type: '*/*' }) ,addWebhook);
 
 app.set('trust proxy', 1); //  for traefik proxy
 
@@ -77,6 +83,8 @@ if (process.env.NODE_ENV === "production") {
   app.use("/api/auth/login", authLimiter);
 }
 
+
+
 app.use(express.json({ limit: "10kb" }));
 
 const io = socketIo(server, {
@@ -128,6 +136,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/teacher", teacherRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/notification", notificationRoutes)
+app.use("/api/chargily", chargilyRoutes)
+
 //defined 404 middleware (page not found)
 app.all("*", (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} on this server`, 404));
