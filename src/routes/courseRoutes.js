@@ -29,6 +29,8 @@ const {
   getOnlyTitleAndDescription,
   getOnlyCoursesIds,
   updateVideoTitleAndDescription,
+  getCourseOverview,
+  enrollCourseWithSubscription,
 } = require("../controllers/courseController");
 const { prmission, restrictTo } = require("../controllers/authController");
 const {
@@ -41,6 +43,7 @@ const {
   getCommentsInLesson,
 } = require("../controllers/commentController");
 const { setUploads } = require("../utils/uploadVideo");
+const { checkCourseAccess } = require("../middlewares/checkCourseAccess");
 
 const router = express.Router();
 router.route("/getCategory").get(getCoursesAndCategory);
@@ -68,9 +71,13 @@ router
   .get(prmission, restrictTo("teacher"), searchCoursesTeachers);
 // get my enrolled Courses
 router.route("/my-courses").get(prmission, restrictTo("student"), getMyCourses);
+// add the middleware to check if the user is enrolled in the course or not 
+// note: this route using in /course-overview/:courseId frontend route to show course overview to not enrolled users
+// add endpoint to get course details for not enrolled users
+router.route('/course-overview/:courseId').get(getCourseOverview);
 router
   .route("/:courseId")
-  .get(getCourse)
+  .get(prmission,checkCourseAccess,getCourse)
   .post(prmission, restrictTo("teacher"), updateCourseSections)
   .patch(
     prmission,
@@ -103,10 +110,10 @@ router
   .delete(prmission, restrictTo("teacher"), deleteVideoFromSection);
 
 //enrolled in course
-router
-  .route("/enrolled/:courseId")
-  .post(prmission, restrictTo("student"), enrollCourse)
-  .post(prmission, restrictTo("student"), unenrollCourse); // switch POST to PUT or PATCH or DELETE
+
+router.post("/enrolled/:courseId",prmission, restrictTo("student"), enrollCourse) // enrolled without subscription
+router.post("/enrolled-with-subscription/:courseId",prmission, restrictTo("student"), enrollCourseWithSubscription) // enrolled with subscription
+router.delete("/unenrolled/:courseId",prmission, restrictTo("student"), unenrollCourse); // switch POST to PUT or PATCH or DELETE
 
 // update isComplete video
 router

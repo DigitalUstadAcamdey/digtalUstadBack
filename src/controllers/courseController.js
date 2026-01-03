@@ -14,6 +14,7 @@ const sharp = require("sharp");
 const cloudinary = require("./../config/cloudinary");
 const Section = require("../models/sectionsModel");
 const Coupon = require("../models/couponModel");
+const Subscription = require("../models/subscriptionModel");
 
 const multerStorage = multer.memoryStorage();
 
@@ -275,6 +276,7 @@ exports.updateCourse = catchAsync(async (req, res, next) => {
   });
 });
 
+// for enrolled users only (logged in users)
 exports.getCourse = catchAsync(async (req, res, next) => {
   const course = await Course.findById(req.params.courseId)
     .populate([
@@ -310,6 +312,36 @@ exports.getCourse = catchAsync(async (req, res, next) => {
         path: "reviews",
         select: "user createdAt rating content",
         options: { sort: { createdAt: -1 } }, // ترتيب التقييمات من ��ديد الى قديم
+      },
+    ])
+    .lean();
+  if (!course) return next(new AppError("المادة غير موجودة", 404));
+  res.status(200).json({
+    message: "نجاح",
+    course,
+  });
+});
+// for all users (logged in and not logged in users)
+exports.getCourseOverview = catchAsync(async (req, res, next) => {
+  const course = await Course.findById(req.params.courseId)
+    .populate([
+      {
+        path: "instructor",
+        select: "username thumbnail ",
+      },
+      {
+        path: "sections",
+        select: "title videos",
+        populate: {
+          path: "videos",
+          select:
+            "lessonTitle duration",
+        },
+      },
+      {
+        path: "reviews",
+        select: "user createdAt rating content",
+        options: { sort: { createdAt: -1 } },
       },
     ])
     .lean();
@@ -394,8 +426,8 @@ exports.getMyCourses = catchAsync(async (req, res, next) => {
   });
 });
 
-// تسجيل طالب في الكورس
-exports.enrollCourse = async (req, res, next) => {
+// enrolled student in course (without subscription)
+exports.enrollCourse =catchAsync(async (req, res, next) => {
   const courseId = req.params.courseId;
   const studentId = req.user.id;
   const { couponCode } = req.body;
@@ -429,6 +461,7 @@ exports.enrollCourse = async (req, res, next) => {
     await coupon.save();
   }
 
+  // simple balance check finalPrice > 0 && student.balance < finalPrice 
   if (!(student.balance >= 0 && student.balance >= finalPrice)) {
     return next(new AppError("ليس لديك رصيد كاف للتسجيل في هذا الكورس", 400));
   }
@@ -438,7 +471,8 @@ exports.enrollCourse = async (req, res, next) => {
 
   await course.save();
 
-  const updateStudent = await User.findByIdAndUpdate(
+  // update user info after enroll in course
+   await User.findByIdAndUpdate(
     studentId,
     {
       $push: { enrolledCourses: courseId },
@@ -450,11 +484,58 @@ exports.enrollCourse = async (req, res, next) => {
     }
   );
 
-  console.log(updateStudent);
   res.status(200).json({
     message: "تم التسجيل في الدورة بنجاح",
   });
-};
+});
+// enrolled student in course (with subscription)
+exports.enrollCourseWithSubscription = catchAsync(async (req, res, next) => {
+  const { courseId } = req.params;
+  const userId = req.user.id;
+
+  const user = await User.findById(userId);
+  if (!user) return next(new AppError("المستخدم غير موجود", 404));
+
+  const course = await Course.findById(courseId);
+  if (!course) return next(new AppError("الكورس غير موجود", 404));
+
+  // check for active subscription
+  const subscription = await Subscription.findOne({
+    user: userId,
+    status: "active",
+    endDate: { $gt: new Date() },
+  });
+
+  if (!subscription) {
+    return next(new AppError("لا تملك اشتراكًا نشطًا", 403));
+  }
+
+  // check if already enrolled
+  if (user.enrolledCourses.includes(courseId)) {
+    return next(new AppError("أنت مسجل بالفعل في هذا الكورس", 400));
+  }
+
+  // add course to user's enrolledCourses
+  user.enrolledCourses.push(courseId);
+  await user.save({
+        validateBeforeSave: false,
+      });
+
+  // add course to subscription.courses
+  subscription.courses.push(courseId);
+  await subscription.save();
+
+  // update course stats
+  course.enrolledStudents.push(userId);
+  course.studentsCount += 1;
+  await course.save();
+
+  res.status(200).json({
+    message: "تم التسجيل في الكورس عبر الاشتراك السنوي",
+  });
+});
+
+
 
 // remove student from course
 exports.unenrollCourse = catchAsync(async (req, res, next) => {
