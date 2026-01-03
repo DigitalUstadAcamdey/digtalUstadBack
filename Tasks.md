@@ -1,31 +1,62 @@
 ## 📌 Project Tasks
 
-### 🛡️ 1. Security Enhancements
-- Add security libraries:
-  - `rate-limit`
-  - `helmet`
-- Implement protection against **NoSQL Injection** attacks
+---
+
+### 🛡️ 1. Subscription Model
+
+- Create a Subscription model
+- Each subscription links:
+  - user
+  - course
+- Track subscription lifecycle with dates and status
+
+Fields:
+- user (ObjectId → User)
+- course (ObjectId → Course)
+- startDate
+- endDate
+- status (active | expired | cancelled)
+- createdAt
 
 ---
 
-### 🔔 2. Notifications System
-- Develop and integrate the full **notifications workflow**
+### 🧠 2. Business Logic Rules
+
+- User must have:
+  1. Purchased / enrolled in course
+  2. Active subscription
+  3. Valid endDate
+
+- Access is denied if:
+  - Subscription does not exist
+  - Status !== active
+  - endDate < now
 
 ---
 
-### ✉️ 3. Email Module
-- Add Email Provider Config
-- Implement email sending functionality
-- Setup templates and formatting for system emails
-- Add email queueing (if needed)
-- Add email error handling & logs
+### 🔐 3. Access Control (Middleware)
+
+- Create middleware:
+  - checkCourseEnrollment (Optional)
+  - checkSubscriptionValidity (Optional)
+
+- Middleware responsibilities:
+  - Protect course content routes
+  - Act as real-time access gate
+  - Never modify database state
 
 ---
 
-### 🛑 4. Support Module
-- Disable the **Support** section (Tickets / FAQs)
+### ⏱️ 4. Cron Job (Subscription Maintenance)
+
+- Run cron job periodically (once per day)
+- Cron responsibilities:
+  - Find expired subscriptions
+  - Update status to "expired"
+  - remove course access
+  - send notification 
+
 
 ---
 
-### 🎥 5. (Optional) Video Upload Optimization
-- Replace full video upload with sending only the **videoId**
+

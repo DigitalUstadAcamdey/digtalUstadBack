@@ -5,6 +5,8 @@ const connectToDb = require("./utils/connectDb");
 //connect to database
 connectToDb();
 
+// run the subscription check cron job
+require('./crons/checkSubscriptionDate')
 
 server.listen(port, '0.0.0.0', () => {
   console.log("ENV :", process.env.NODE_ENV);

@@ -9,5 +9,6 @@ module.exports = {
   chargily_secret_key:process.env.CHARGILY_SECRET_KEY,
   chargily_base_url:process.env.CHARGILY_BASE_URL,
   chargily_success_url:process.env.CHARGILY_SUCCESS_URL,
-  chargily_failure_url:process.env.CHARGILY_FAILURE_URL
+  chargily_failure_url:process.env.CHARGILY_FAILURE_URL,
+  subscriptionPrice: Number(process.env.SUBSCRIPTION_PRICE),
 };

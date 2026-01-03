@@ -23,6 +23,7 @@ const adminRoutes = require("./routes/admin.route");
 const teacherRoutes = require("./routes/teacher.route");
 const couponRoutes = require("./routes/coupon.route");
 const notificationRoutes = require("./routes/notification.route")
+const subscriptionRoutes = require("./routes/subscritption.route");
 const chargilyRoutes = require("./routes/chargily.route");
 const { addWebhook } = require("./controllers/chargily.controller");
 
@@ -48,10 +49,12 @@ app.use(helmet({
 //cors
 app.use(
   cors({
-    origin: [
+ 
+    origin:[
       "http://localhost:3000",
       "https://e-learning-platform-eosin.vercel.app",
       "https://www.digitalustadacademy.com",
+      "https://quiet-bats-tap.loca.lt"
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
@@ -93,6 +96,7 @@ const io = socketIo(server, {
       "http://localhost:3000",
       "https://e-learning-platform-eosin.vercel.app",
       "https://www.digitalustadacademy.com",
+      "https://1686134b9a15.ngrok-free.app"
     ],
     methods: ["GET", "POST"],
   },
@@ -136,6 +140,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/teacher", teacherRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/notification", notificationRoutes)
+app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/chargily", chargilyRoutes)
 
 //defined 404 middleware (page not found)
