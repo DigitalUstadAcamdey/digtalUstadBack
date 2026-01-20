@@ -1,10 +1,11 @@
 const User = require('../models/userModel')
 const Subscription = require("../models/subscriptionModel");
-const cron =require('node-cron')
+const cron =require('node-cron');
+const config = require('../config/config');
 // this cron to check if the user subscription is still valid or expired and update the status field in subscription collection
 
 // runs every 00:00 of each day => `0 0 * * *`
-cron.schedule("20 * * * * *", async () => {
+cron.schedule(config.subscriptionCheck, async () => {
   try {
     const now = new Date();
 
