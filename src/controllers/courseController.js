@@ -366,7 +366,7 @@ exports.getAllcourse = catchAsync(async (req, res, next) => {
         populate: {
           path: "videos",
           select:
-            "lessonTitle duration url isCompleted completedBy comments files",
+            "lessonTitle duration  isCompleted completedBy comments files",
           populate: [
             {
               path: "comments",

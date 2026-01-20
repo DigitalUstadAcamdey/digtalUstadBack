@@ -11,4 +11,5 @@ module.exports = {
   chargily_success_url:process.env.CHARGILY_SUCCESS_URL,
   chargily_failure_url:process.env.CHARGILY_FAILURE_URL,
   subscriptionPrice: Number(process.env.SUBSCRIPTION_PRICE),
+  subscriptionCheck:String(process.env.SUBSCRIPTION_CHECK),
 };
