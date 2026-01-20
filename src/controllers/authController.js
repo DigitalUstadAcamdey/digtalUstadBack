@@ -13,8 +13,8 @@ const cookieOptions = {
   secure: process.env.NODE_ENV === "production",
   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   maxAge: 24 * 60 * 60 * 1000 * 30, // 1month
-  // domain: ".digitalustadacademy.com",
-  // path: "/",
+  domain: ".digitalustadacademy.com",
+  path: "/",
 };
 //upload img for users
 const multer = require("multer");
