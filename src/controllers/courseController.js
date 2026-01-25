@@ -335,7 +335,7 @@ exports.getCourseOverview = catchAsync(async (req, res, next) => {
         populate: {
           path: "videos",
           select:
-            "lessonTitle duration",
+            "lessonTitle duration url",
         },
       },
       {
@@ -343,9 +343,19 @@ exports.getCourseOverview = catchAsync(async (req, res, next) => {
         select: "user createdAt rating content",
         options: { sort: { createdAt: -1 } },
       },
-    ])
-    .lean();
+    ]).lean()
+    
   if (!course) return next(new AppError("المادة غير موجودة", 404));
+
+  // extract the first video url 
+  course.sections.forEach((section, sIndex) => {
+    section.videos.forEach((video, vIndex) => {
+      if (!(sIndex === 0 && vIndex === 0)) {
+        delete video.url; // نحذف url من كل الفيديوهات ما عدا الأول
+      }
+    });
+  });
+  
   res.status(200).json({
     message: "نجاح",
     course,
