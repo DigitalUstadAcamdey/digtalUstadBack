@@ -6,6 +6,7 @@ const { OAuth2Client } = require("google-auth-library");
 const Email = require("./../utils/sendEmails");
 const { promisify } = require("util");
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 
 // cookie config
 const cookieOptions = {
@@ -118,16 +119,20 @@ exports.loginUser = catchAsync(async (req, res, next) => {
 exports.signup = catchAsync(async (req, res, next) => {
   req.body.role = "student";
   req.body.balance = 0;
+  req.body.active = false;
   const user = await User.create(req.body);
 
   // TODO: don't forget to implement send Email
   // await new Email(user);
+   const verifyToken = user.createEmailVerifyToken();
+  await user.save({ validateBeforeSave: false });
 
-  const token = createToken(user);
-  res.cookie("token", token, cookieOptions);
+  const verifyURL = `${req.protocol}://${req.get("host")}/api/auth/verify-email/${verifyToken}`;
+
+  await new Email(user, verifyURL).sendEmailVerification();
+
   res.status(200).json({
-    message: "نجاح",
-    user,
+    message: "تم إرسال رابط التحقق إلى بريدك الإلكتروني. يرجى التحقق لتفعيل الحساب.",
   });
 });
 
@@ -143,6 +148,32 @@ exports.logout = catchAsync(async (req, res, next) => {
 
   res.status(200).json({ message: "تم تسجيل الخروج بنجاح" });
 });
+
+
+exports.verifyEmail = catchAsync(async (req, res, next) => {
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
+
+  const user = await User.findOne({
+    emailVerifyToken: hashedToken,
+    emailVerifyExpires: { $gt: Date.now() },
+  });
+
+  if (!user) return next(new AppError("Token invalid or expired", 400));
+
+  user.active = true;
+  user.emailVerifyToken = undefined;
+  user.emailVerifyExpires = undefined;
+
+  await user.save({
+    validateBeforeSave: false,
+  });
+
+  res.status(200).json({ message: "Email verified successfully" });
+});
+
 
 const client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
@@ -183,6 +214,7 @@ exports.loginWithGoogle = catchAsync(async (req, res, next) => {
       username: payload.name,
       email: payload.email,
       thumbnail: payload.picture,
+      active:true
     });
   }
   if (!user.active) {

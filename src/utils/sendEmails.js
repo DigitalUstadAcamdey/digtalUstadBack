@@ -57,4 +57,7 @@ module.exports = class Email {
   async resetPassword() {
     await this.send("resetPassword", "إعادة تعيين كلمة المرور الخاصة بك في منصتنا Digital Ustad Academy");
   }
+  async sendEmailVerification() {
+    await this.send("emailVerification", "تحقق من بريدك الإلكتروني في Digital Ustad Academy");
+  }
 };

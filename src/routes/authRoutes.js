@@ -10,9 +10,9 @@ const {
   uploadImageUser,
   uploadUsingClodinary,
   logout,
+  verifyEmail,
 } = require("../controllers/authController");
-const passport = require("passport");
-const User = require("../models/userModel");
+
 
 const router = express.Router();
 
@@ -26,5 +26,8 @@ router.get("/google/callback", loginWithGoogle);
 
 router.post("/forget-password", forgetPassword);
 router.post("/reset-password/:resetToken", resetPassword);
+
+// Email verification route
+router.get("/verify-email/:token", verifyEmail);
 
 module.exports = router;

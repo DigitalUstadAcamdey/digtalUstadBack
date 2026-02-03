@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
+const { type } = require("os");
 
 const Schema = mongoose.Schema;
 
@@ -91,6 +92,15 @@ const userSchema = new Schema({
     default: null,
     select: false,
   },
+  // verified Email
+  emailVerifyToken:{
+    type:String,
+    select:false,
+  },
+  emailVerifyExpires: {
+  type: Date,
+  select: false,
+},
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -176,6 +186,21 @@ userSchema.methods.updateProgress = async function (courseId, videoId) {
 userSchema.methods.correctPassword = function (currentPassword) {
   return bcrypt.compare(currentPassword, this.password);
 };
+
+// create Email verify token
+userSchema.methods.createEmailVerifyToken = function () {
+  const token = crypto.randomBytes(32).toString("hex");
+
+  this.emailVerifyToken = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+
+  this.emailVerifyExpires = Date.now() + 10 * 60 * 1000; // 10 min
+
+  return token;
+};
+
 
 const User = mongoose.model("User", userSchema);
 
