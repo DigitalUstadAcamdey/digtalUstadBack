@@ -19,6 +19,17 @@ exports.checkCourseAccess = catchAsync(async (req, res, next) => {
   if (isEnrolled) {
     return next();
   }
+  // for teachers 
+  if(user.role === 'teacher'){
+    const isPublished = user.publishedCourses.includes(courseId);
+    if(isPublished){
+      return next();
+    }
+  }
+  // for admins
+  if (user.role === "admin") {
+    return next();
+  }
 
   return next(new AppError("لا تملك صلاحية الوصول", 403));
 });

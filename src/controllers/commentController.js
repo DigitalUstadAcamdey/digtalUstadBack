@@ -69,7 +69,7 @@ exports.addComment = catchAsync(async (req, res, next) => {
       section.videos.findIndex((lesson) => lesson.id === video.id) + 1, //error in section
   });
 
-  const notification = await Notification.create({
+   await Notification.create({
     user: course.instructor,
     courseId: course.id,
     courseImage: course.imageCover,
@@ -80,7 +80,7 @@ exports.addComment = catchAsync(async (req, res, next) => {
       section.videos.findIndex((lesson) => lesson.id === video.id) + 1, //error in section
   });
   const teacher = await User.findById(course.instructor);
-  teacher.notifications.push(notification);
+  // teacher.notifications.push(notification);
   await teacher.save({
     validateModifiedOnly: true,
   });
