@@ -9,11 +9,10 @@ exports.checkCourseAccess = catchAsync(async (req, res, next) => {
   const { courseId } = req.params;
   const userId = req.user.id;
 
-  const user = await User.findById(userId);
+  const user = await User.findById(userId)
 
   // check if user purchased or enrolled in course
   const isEnrolled = user.enrolledCourses.includes(courseId);
-  console.log(isEnrolled)
 
   // if he has subscription or is enrolled, allow access
   if (isEnrolled) {
@@ -21,7 +20,7 @@ exports.checkCourseAccess = catchAsync(async (req, res, next) => {
   }
   // for teachers 
   if(user.role === 'teacher'){
-    const isPublished = user.publishedCourses.includes(courseId);
+    const isPublished = user.publishedCourses.find(course => course._id.toString() === courseId);
     if(isPublished){
       return next();
     }
