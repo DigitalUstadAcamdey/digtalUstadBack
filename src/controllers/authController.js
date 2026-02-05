@@ -22,6 +22,7 @@ const multer = require("multer");
 const sharp = require("sharp");
 const cloudinary = require("./../config/cloudinary");
 const { jwt_secret, jwt_expiration_time } = require("../config/config");
+const config = require("../config/config");
 
 const multerStorage = multer.memoryStorage();
 const multerFilter = (req, file, cb) => {
@@ -124,10 +125,13 @@ exports.signup = catchAsync(async (req, res, next) => {
 
   // TODO: don't forget to implement send Email
   // await new Email(user);
-   const verifyToken = user.createEmailVerifyToken();
+  const verifyToken = user.createEmailVerifyToken();
   await user.save({ validateBeforeSave: false });
 
-  const verifyURL = `${req.protocol}://${req.get("host")}/api/auth/verify-email/${verifyToken}`;
+  // const verifyURL = `${req.protocol}://${req.get("host")}/api/auth/verify-email/${verifyToken}`;
+  // client link to verify email
+  const verifyURL = `${config.client_url}/auth/check-email/${verifyToken}`;
+
 
   await new Email(user, verifyURL).sendEmailVerification();
 
@@ -172,6 +176,22 @@ exports.verifyEmail = catchAsync(async (req, res, next) => {
   });
 
   res.status(200).json({ message: "Email verified successfully" });
+});
+exports.resendVerificationEmail = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });       
+  if (!user) {
+    return next(new AppError("User not found", 404));
+  }
+  if (user.active) {
+    return next(new AppError("Email is already verified", 400));
+  }
+  const verifyToken = user.createEmailVerifyToken();
+  await user.save({ validateBeforeSave: false });
+  const verifyURL = `${config.client_url}/auth/check-email/${verifyToken}`;
+  await new Email(user, verifyURL).sendEmailVerification();
+  res.status(200).json({ message: "تم إعادة إرسال بريد التحقق بنجاح" });
 });
 
 

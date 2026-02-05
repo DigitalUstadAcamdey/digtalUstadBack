@@ -21,7 +21,7 @@ exports.getAllReviews = catchAsync(async (req, res, next) => {
 
 // add review in course
 exports.addReview = catchAsync(async (req, res, next) => {
-  const course = await Course.findById(req.params.courseId);
+  const course = await Course.findById(req.params.courseId).populate('reviews enrolledStudents');
   if (!course) {
     return next(new AppError("المادة غير موجودة", 404));
   }
@@ -37,7 +37,6 @@ exports.addReview = catchAsync(async (req, res, next) => {
   ) {
     return next(new AppError("لا يمكنك تقييم الدورة التي لم تسجيل فيها", 403));
   }
-
   // التحقق مما إذا كان المستخدم قد قام بتقييم الكورس من قبل
   if (
     course.reviews.some((review) => review.user._id.toString() === req.user.id)
@@ -59,7 +58,8 @@ exports.addReview = catchAsync(async (req, res, next) => {
 
 // update review
 exports.updateReview = catchAsync(async (req, res, next) => {
-  const review = await Review.findByIdAndUpdate(req.params.reviewId, req.body, {
+  const { content} = req.body
+  const review = await Review.findByIdAndUpdate(req.params.reviewId, {content}, {
     new: true,
     runValidators: true,
   });

@@ -51,9 +51,6 @@ exports.getMyFaqMessage = catchAsync(async (req, res, next) => {
   }
 
   const faqs = await Ticket.find({ user: user._id }).populate("user");
-  if (!faqs.length) {
-    return next(new AppError("لا يوجد لديك رسائل تذكرة حاليا", 404));
-  }
 
   //send with socket.io
   const io = req.app.get("socketio");

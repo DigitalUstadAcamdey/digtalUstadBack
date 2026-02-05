@@ -217,7 +217,7 @@ exports.addReply = catchAsync(async (req, res, next) => {
   const student = await User.findById(comment.user);
   console.log('this is the sectionId' , comment.video.sectionId);
 
-  const notification = await Notification.create({
+   await Notification.create({
     user: student,
     courseId: course,
     videoId: comment.video.id,
@@ -229,7 +229,7 @@ exports.addReply = catchAsync(async (req, res, next) => {
     //   (lesson) => lesson.id === comment.video._id.toString()
     // ) + 1,
   });
-  student.notifications.push(notification);
+  // student.notifications.push(notification);
   await student.save({
     validateModifiedOnly: true,
   });
@@ -262,3 +262,51 @@ exports.getCommentsInLesson = catchAsync(async (req, res, next) => {
     data: { comments },
   });
 });
+
+exports.deleteReply = catchAsync(async (req, res, next) => {
+  const { commentId, replyId } = req.params;
+  
+  const comment = await Comment.findById(commentId);
+
+  if (!comment) return next(new AppError("التعليق غير موجود", 404));
+
+  const reply = comment.replies.id(replyId);
+  if (!reply) return next(new AppError("الرد غير موجود", 404));
+ 
+  if (reply.user._id.toString() !== req.user._id.toString())
+    return next(new AppError("ليس لديك الصلاحية لحذف هذا الرد", 403));
+ 
+  reply.remove();
+  
+  await comment.save();
+
+  res.status(204).json({
+    status: "success",
+    message: "تم حذف الرد بنجاح",
+  });
+});
+
+exports.updateReply = catchAsync(async (req, res, next) => {
+  const { commentId, replyId } = req.params;
+  const { text } = req.body;
+
+  const comment = await Comment.findById(commentId);
+  if (!comment) return next(new AppError("التعليق غير موجود", 404));
+  const reply = comment.replies.id(replyId);
+  if (!reply) return next(new AppError("الرد غير موجود", 404));
+  
+  if (reply.user._id.toString() !== req.user._id.toString())
+    return next(new AppError("ليس لديك الصلاحية لتعديل هذا الرد", 403));
+ 
+  reply.text = text;
+
+  await comment.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "تم تعديل الرد بنجاح",
+    comment,
+  });
+});
+
+
