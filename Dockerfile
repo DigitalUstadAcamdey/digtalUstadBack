@@ -1,17 +1,17 @@
-# don't forget to add target env like : as env
-FROM node:22.18.0  AS production
+FROM node:22-alpine AS production
 
 WORKDIR /app
 
-# good practice : for add cache
+ENV NODE_ENV=production
+
 COPY package.json package-lock.json ./
+RUN npm ci --only=production
 
-# npm ci fast and more reliable
-RUN npm ci
-
-# copy all files
 COPY . .
 
+RUN addgroup -S app && adduser -S app -G app
+USER app
+
 EXPOSE 5000
-# start the application ind development mode , in production mode use npm run start:prod
+
 CMD ["npm", "run", "start:prod"]
