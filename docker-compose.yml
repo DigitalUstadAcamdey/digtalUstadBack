@@ -1,5 +1,7 @@
 services:
   digital_ustad_academy:
+    ports:
+      - "5000:5000"
     container_name: digital_ustad_academy_api
     build:
       context: .
@@ -14,7 +16,7 @@ services:
     networks:
       - traefik-network
     depends_on:
-      - mongo 
+      - mongo
     env_file:
       - ./.env
 
@@ -43,20 +45,21 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /home/traefik/letsencrypt:/letsencrypt
+      - traefik_letsencrypt:/letsencrypt
     networks:
-      - traefik-network      
-      
+      - traefik-network
+
   mongo:
     image: mongo
     restart: always
     networks:
       - traefik-network
+    command: ["mongod", "--bind_ip_all"]
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
     volumes:
-      - ./mongo-data:/data/db  
+      - mongo_data:/data/db
 
   mongo-express:
     image: mongo-express
@@ -64,7 +67,7 @@ services:
     networks:
       - traefik-network
     ports:
-      - 8082:8081  
+      - 8082:8081
     environment:
       ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
       ME_CONFIG_BASICAUTH_ENABLED: true
@@ -74,4 +77,7 @@ services:
 networks:
   traefik-network:
     external: true
-         
+
+volumes:
+  mongo_data:
+  traefik_letsencrypt:
