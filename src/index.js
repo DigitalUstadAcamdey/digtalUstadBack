@@ -26,6 +26,7 @@ const notificationRoutes = require("./routes/notification.route")
 const subscriptionRoutes = require("./routes/subscritption.route");
 const chargilyRoutes = require("./routes/chargily.route");
 const { addWebhook } = require("./controllers/chargily.controller");
+const todoRoutes = require("./routes/todo.route");
 
 
 const app = express();
@@ -42,14 +43,14 @@ const server = http.createServer(app);
 app.use(helmet({
   // disable some Rules
   crossOriginResourcePolicy: { policy: "cross-origin" }, // enable the imgs , videos , other files form difreent
-    crossOriginEmbedderPolicy: false, // allow the iframes , videos in Frontend 
+    crossOriginEmbedderPolicy: false, // allow the iframes , videos in Frontend
     contentSecurityPolicy: false, // disable the CSP
 }));
 
 //cors
 app.use(
   cors({
- 
+
     origin:[
       "http://localhost:3000",
       "https://e-learning-platform-eosin.vercel.app",
@@ -66,7 +67,7 @@ app.use(
 // for all routes
 const generalLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hours
-  max: 300, 
+  max: 300,
   message: {
     status: "fail",
     message: "Too many requests from this IP. Please try again later."
@@ -76,7 +77,7 @@ const generalLimiter = rateLimit({
 // for login/signup/spam sensitive routes
 const authLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 5, 
+  max: 5,
   message: "Too many login attempts. Try again in 5 minutes.",
 });
 
@@ -121,7 +122,7 @@ app.use(hpp());
 app.use((req, res, next) => {
   res.setTimeout(3600000, () => {
     // 3600000=> 1h
-    next(new AppError("Request Timeout", 499)); 
+    next(new AppError("Request Timeout", 499));
   });
   next();
 });
@@ -142,6 +143,8 @@ app.use("/api/coupons", couponRoutes);
 app.use("/api/notification", notificationRoutes)
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/chargily", chargilyRoutes)
+app.use("/api/todos", todoRoutes);
+
 
 //defined 404 middleware (page not found)
 app.all("*", (req, res, next) => {

@@ -1,0 +1,263 @@
+{
+  "info": {
+    "_postman_id": "b3b2f7a2-7f1b-4ab3-9b8b-1c0f4d1e7b71",
+    "name": "Todo Feature API",
+    "description": "Postman collection for testing the todo feature endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Todo",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Finish homework\",\n  \"description\": \"Complete the math assignment\",\n  \"date\": \"2026-04-05T12:00:00.000Z\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/todos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "todos"
+          ]
+        },
+        "description": "Create a new todo item."
+      },
+      "response": []
+    },
+    {
+      "name": "Get All Todos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/todos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "todos"
+          ]
+        },
+        "description": "Fetch all todos."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Completed Todos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/todos/completed",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "todos",
+            "completed"
+          ]
+        },
+        "description": "Fetch todos with completed=true."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Today's Todos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/todos/today",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "todos",
+            "today"
+          ]
+        },
+        "description": "Fetch todos scheduled for today."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Upcoming Todos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/todos/upcoming",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "todos",
+            "upcoming"
+          ]
+        },
+        "description": "Fetch todos with a future date."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Today's Progress",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/todos/today-progress",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "todos",
+            "today-progress"
+          ]
+        },
+        "description": "Fetch today's completion percentage."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Todo By Id",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/todos/{{todoId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "todos",
+            "{{todoId}}"
+          ]
+        },
+        "description": "Fetch a single todo by id."
+      },
+      "response": []
+    },
+    {
+      "name": "Update Todo",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Finish homework updated\",\n  \"description\": \"Complete the math assignment and review notes\",\n  \"completed\": true,\n  \"date\": \"2026-04-05T15:00:00.000Z\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/todos/{{todoId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "todos",
+            "{{todoId}}"
+          ]
+        },
+        "description": "Update a todo by id."
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Todo",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/todos/{{todoId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "todos",
+            "{{todoId}}"
+          ]
+        },
+        "description": "Delete a todo by id."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "token",
+      "value": "paste-your-jwt-token-here"
+    },
+    {
+      "key": "todoId",
+      "value": "paste-a-todo-id-here"
+    }
+  ]
+}
