@@ -73,7 +73,8 @@ exports.updateMe = catchAsync(async (req, res, next) => {
     req.body.password ||
     req.body.progress ||
     req.body.enrolledCourses ||
-    req.body.balance
+    req.body.balance ||
+    req.body.email
   ) {
     return next(new AppError("هذا النطاق غير مخصص لتحديث هذه القيم", 400));
   }
@@ -104,7 +105,7 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
 });
 
 exports.getMe = catchAsync(async (req, res, next) => {
- 
+
   const user = await User.findById(req.user.id)
     .select("-password")
     .populate([
