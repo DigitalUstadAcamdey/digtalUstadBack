@@ -12,6 +12,9 @@ const {
   logout,
   verifyEmail,
   resendVerificationEmail,
+  getMySessions,
+  logoutSession,
+  logoutAllSessions,
 } = require("../controllers/authController");
 
 
@@ -21,6 +24,9 @@ router.post("/login", loginUser);
 // ronly basic info(email , username , password) not include the image , can added the image in the update profile route
 router.post("/signup", signup);
 router.post('/logout',logout)
+router.get("/sessions", prmission, getMySessions);
+router.delete("/sessions/:sessionId", prmission, logoutSession);
+router.post("/logout-all", prmission, logoutAllSessions);
 
 router.get("/google", redirectGoogle);
 

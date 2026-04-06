@@ -78,6 +78,32 @@ const userSchema = new Schema({
     type: Date,
     default: Date.now,
   },
+  loggedInDevices: [
+    {
+      sessionId: {
+        type: String,
+        required: true,
+      },
+      ipAddress: String,
+      userAgent: String,
+      browser: String,
+      os: String,
+      deviceType: {
+        type: String,
+        enum: ["desktop", "mobile", "tablet", "bot", "unknown"],
+        default: "unknown",
+      },
+      location: String,
+      loginAt: {
+        type: Date,
+        default: Date.now,
+      },
+      lastActiveAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
   active: {
     type: Boolean,
     default: true,

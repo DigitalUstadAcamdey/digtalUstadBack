@@ -7,6 +7,7 @@ const Email = require("./../utils/sendEmails");
 const { promisify } = require("util");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
+const { buildDeviceSession } = require("../utils/deviceSession");
 
 // cookie config
 const cookieOptions = {
@@ -76,11 +77,39 @@ exports.uploadUsingClodinary = catchAsync(async (req, res, next) => {
   next();
 });
 
-const createToken = (user) => {
-  const token = jwt.sign({ id: user.id }, jwt_secret, {
+const sanitizeUser = (user) => {
+  const userResponse = user.toObject ? user.toObject() : { ...user };
+  delete userResponse.password;
+  delete userResponse.passwordConfirm;
+  return userResponse;
+};
+
+const createToken = (user, sessionId) => {
+  const token = jwt.sign({ id: user.id, sessionId }, jwt_secret, {
     expiresIn: jwt_expiration_time,
   });
   return token;
+};
+
+const attachSessionToUser = async (user, req) => {
+  const session = await buildDeviceSession(req);
+
+  user.lastLogin = new Date();
+  user.loggedInDevices = [session, ...(user.loggedInDevices || [])].slice(0, 10);
+
+  await user.save({ validateBeforeSave: false });
+
+  return session;
+};
+
+const removeSessionFromUser = async (userId, sessionId) => {
+  if (!sessionId) return;
+
+  await User.findByIdAndUpdate(userId, {
+    $pull: {
+      loggedInDevices: { sessionId },
+    },
+  });
 };
 
 exports.loginUser = catchAsync(async (req, res, next) => {
@@ -105,15 +134,23 @@ exports.loginUser = catchAsync(async (req, res, next) => {
       )
     );
   }
-  const token = createToken(user);
+  const session = await attachSessionToUser(user, req);
+  const token = createToken(user, session.sessionId);
   res.cookie("token", token, cookieOptions);
-
-  const userResponse = user.toObject ? user.toObject() : { ...user };
-  delete userResponse.password;
 
   res.status(200).json({
     status: "تم تسجيل الدخول بنجاح",
-    user: userResponse,
+    token,
+    session: {
+      sessionId: session.sessionId,
+      browser: session.browser,
+      os: session.os,
+      deviceType: session.deviceType,
+      location: session.location,
+      ipAddress: session.ipAddress,
+      loginAt: session.loginAt,
+    },
+    user: sanitizeUser(user),
   });
 });
 
@@ -141,6 +178,23 @@ exports.signup = catchAsync(async (req, res, next) => {
 });
 
 exports.logout = catchAsync(async (req, res, next) => {
+  let token;
+
+  if (req.cookies?.token) {
+    token = req.cookies.token;
+  } else if (req.headers.authorization?.startsWith("Bearer")) {
+    token = req.headers.authorization.split(" ")[1];
+  }
+
+  if (token) {
+    try {
+      const decoded = await promisify(jwt.verify)(token, jwt_secret);
+      await removeSessionFromUser(decoded.id, decoded.sessionId);
+    } catch (error) {
+      // Ignore invalid/expired tokens during logout so cookie cleanup still works.
+    }
+  }
+
   res.cookie("token", "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production" ? true : false,
@@ -151,6 +205,81 @@ exports.logout = catchAsync(async (req, res, next) => {
   });
 
   res.status(200).json({ message: "تم تسجيل الخروج بنجاح" });
+});
+
+exports.getMySessions = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user.id).select("loggedInDevices");
+
+  res.status(200).json({
+    message: "Active sessions fetched successfully",
+    currentSessionId: req.sessionId || null,
+    sessions: (user?.loggedInDevices || []).map((session) => ({
+      sessionId: session.sessionId,
+      browser: session.browser,
+      os: session.os,
+      deviceType: session.deviceType,
+      location: session.location,
+      ipAddress: session.ipAddress,
+      userAgent: session.userAgent,
+      loginAt: session.loginAt,
+      lastActiveAt: session.lastActiveAt,
+      isCurrent: session.sessionId === req.sessionId,
+    })),
+  });
+});
+
+exports.logoutSession = catchAsync(async (req, res, next) => {
+  const sessionId = req.params.sessionId;
+  const user = await User.findById(req.user.id).select("loggedInDevices");
+
+  const sessionExists = user?.loggedInDevices?.some(
+    (session) => session.sessionId === sessionId
+  );
+
+  if (!sessionExists) {
+    return next(new AppError("Session not found", 404));
+  }
+
+  await removeSessionFromUser(req.user.id, sessionId);
+
+  const response = {
+    message: "Session logged out successfully",
+  };
+
+  if (sessionId === req.sessionId) {
+    res.cookie("token", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production" ? true : false,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      domain: ".digitalustadacademy.com",
+      path: "/",
+      expires: new Date(0),
+    });
+    response.currentSessionLoggedOut = true;
+  }
+
+  res.status(200).json(response);
+});
+
+exports.logoutAllSessions = catchAsync(async (req, res, next) => {
+  await User.findByIdAndUpdate(req.user.id, {
+    $set: {
+      loggedInDevices: [],
+    },
+  });
+
+  res.cookie("token", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production" ? true : false,
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    domain: ".digitalustadacademy.com",
+    path: "/",
+    expires: new Date(0),
+  });
+
+  res.status(200).json({
+    message: "All sessions logged out successfully",
+  });
 });
 
 
@@ -245,7 +374,8 @@ exports.loginWithGoogle = catchAsync(async (req, res, next) => {
       )
     );
   }
-  const token = createToken(user);
+  const session = await attachSessionToUser(user, req);
+  const token = createToken(user, session.sessionId);
   res.cookie("token", token, cookieOptions);
 
   res.redirect(
@@ -280,6 +410,21 @@ exports.prmission = catchAsync(async (req, res, next) => {
   if (decoded.exp < Date.now() / 1000) {
     return next(new AppError("Token has expired", 401));
   }
+
+  if (decoded.sessionId) {
+    const activeSession = user.loggedInDevices?.find(
+      (session) => session.sessionId === decoded.sessionId
+    );
+
+    if (!activeSession) {
+      return next(new AppError("Session is no longer active", 401));
+    }
+
+    activeSession.lastActiveAt = new Date();
+    await user.save({ validateBeforeSave: false });
+    req.sessionId = decoded.sessionId;
+  }
+
   req.user = user;
   next();
 }); //for add permissions with jwt
@@ -339,10 +484,11 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
   user.passwordConfirm = undefined;
   user.resetPasswordToken = undefined; // مسح الرمز بعد التغيير
   user.resetPasswordExpires = undefined; // مسح تاريخ الصلاحية
+  user.loggedInDevices = [];
 
-  const token = createToken(user);
+  const session = await attachSessionToUser(user, req);
+  const token = createToken(user, session.sessionId);
 
-  await user.save({ validateBeforeSave: false });
   res.cookie("token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production" ? true : false,

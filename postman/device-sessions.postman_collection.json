@@ -1,0 +1,322 @@
+{
+  "info": {
+    "name": "DigitalUstad Auth Device Sessions",
+    "description": "Postman collection for testing device/session tracking endpoints added to the Express backend.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "email",
+      "value": "test@example.com"
+    },
+    {
+      "key": "password",
+      "value": "123456"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "sessionId",
+      "value": ""
+    },
+    {
+      "key": "otherSessionId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "Logs in and saves the JWT token and current session id from the response."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Login status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const data = pm.response.json();",
+              "if (data.token) pm.collectionVariables.set('token', data.token);",
+              "if (data.session && data.session.sessionId) pm.collectionVariables.set('sessionId', data.session.sessionId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Get My Sessions",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/sessions",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "sessions"
+          ]
+        },
+        "description": "Returns active sessions for the current user."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Sessions status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const data = pm.response.json();",
+              "pm.test('Sessions array exists', function () {",
+              "  pm.expect(Array.isArray(data.sessions)).to.eql(true);",
+              "});",
+              "",
+              "if (data.currentSessionId) pm.collectionVariables.set('sessionId', data.currentSessionId);",
+              "const otherSession = (data.sessions || []).find(s => !s.isCurrent);",
+              "if (otherSession && otherSession.sessionId) pm.collectionVariables.set('otherSessionId', otherSession.sessionId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Logout Specific Session",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/sessions/{{otherSessionId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "sessions",
+            "{{otherSessionId}}"
+          ]
+        },
+        "description": "Logs out another device. Run this after you have at least 2 active sessions."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Specific logout returns success', function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Logout Current Session",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/sessions/{{sessionId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "sessions",
+            "{{sessionId}}"
+          ]
+        },
+        "description": "Logs out the current device by deleting its own session."
+      }
+    },
+    {
+      "name": "5. Login Again",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "Logs in again so you can continue testing after current-session logout."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Re-login status is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const data = pm.response.json();",
+              "if (data.token) pm.collectionVariables.set('token', data.token);",
+              "if (data.session && data.session.sessionId) pm.collectionVariables.set('sessionId', data.session.sessionId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Logout Current Token Endpoint",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/logout",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "logout"
+          ]
+        },
+        "description": "Logs out using the standard logout endpoint, which now also removes the current session record."
+      }
+    },
+    {
+      "name": "7. Login Once More",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const data = pm.response.json();",
+              "if (data.token) pm.collectionVariables.set('token', data.token);",
+              "if (data.session && data.session.sessionId) pm.collectionVariables.set('sessionId', data.session.sessionId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Logout All Sessions",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/logout-all",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "logout-all"
+          ]
+        },
+        "description": "Clears every active device/session for the authenticated user."
+      }
+    }
+  ]
+}
