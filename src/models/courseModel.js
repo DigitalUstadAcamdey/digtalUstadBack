@@ -13,6 +13,14 @@ const courseSchema = new Schema({
   publishedDate: { type: Date, default: Date.now }, // تاريخ النشر
   studentsCount: { type: Number, default: 0 },
   imageCover: String,
+  telegramChatId: {
+    type: String,
+    default: null,
+  },
+  telegramVipEnabled: {
+    type: Boolean,
+    default: false,
+  },
   enrolledStudents: {
     type: [{ type: Schema.Types.ObjectId, ref: "User" }],
     default: [],

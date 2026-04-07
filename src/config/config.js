@@ -13,4 +13,9 @@ module.exports = {
   subscriptionPrice: Number(process.env.SUBSCRIPTION_PRICE),
   subscriptionCheck:String(process.env.SUBSCRIPTION_CHECK),
   client_url:process.env.CLIENT_URL,
+  telegram_bot_token: process.env.TELEGRAM_BOT_TOKEN,
+  telegram_vip_chat_id: process.env.TELEGRAM_VIP_CHAT_ID,
+  telegram_vip_link_expiry_minutes: Number(
+    process.env.TELEGRAM_VIP_LINK_EXPIRY_MINUTES || 15
+  ),
 };

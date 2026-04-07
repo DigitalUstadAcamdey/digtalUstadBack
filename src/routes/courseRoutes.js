@@ -44,6 +44,7 @@ const {
 } = require("../controllers/commentController");
 const { setUploads } = require("../utils/uploadVideo");
 const { checkCourseAccess } = require("../middlewares/checkCourseAccess");
+const { createVipInviteLink } = require("../controllers/telegramController");
 
 const router = express.Router();
 router.route("/getCategory").get(getCoursesAndCategory);
@@ -71,6 +72,9 @@ router
   .get(prmission, restrictTo("teacher"), searchCoursesTeachers);
 // get my enrolled Courses
 router.route("/my-courses").get(prmission, restrictTo("student"), getMyCourses);
+router
+  .route("/:courseId/telegram-vip-link")
+  .post(prmission, restrictTo("student"), createVipInviteLink);
 // add the middleware to check if the user is enrolled in the course or not 
 // note: this route using in /course-overview/:courseId frontend route to show course overview to not enrolled users
 // add endpoint to get course details for not enrolled users
