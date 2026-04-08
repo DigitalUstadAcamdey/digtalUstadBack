@@ -75,7 +75,7 @@ router.route("/my-courses").get(prmission, restrictTo("student"), getMyCourses);
 router
   .route("/:courseId/telegram-vip-link")
   .post(prmission, restrictTo("student"), createVipInviteLink);
-// add the middleware to check if the user is enrolled in the course or not 
+// add the middleware to check if the user is enrolled in the course or not
 // note: this route using in /course-overview/:courseId frontend route to show course overview to not enrolled users
 // add endpoint to get course details for not enrolled users
 router.route('/course-overview/:courseId').get(getCourseOverview);
