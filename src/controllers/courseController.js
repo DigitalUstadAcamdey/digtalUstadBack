@@ -5,6 +5,12 @@ const APIFeaturs = require("../utils/apiFeaturs");
 const User = require("../models/userModel");
 const Video = require("../models/videoModel");
 const File = require("../models/fileModel");
+const Comment = require("../models/commentModel");
+const Progress = require("../models/progressModel");
+const Notification = require("../models/notifcationModel");
+const Review = require("../models/reviewModel");
+const Payment = require("../models/paymentModel");
+const TelegramVipAccess = require("../models/telegramVipAccessModel");
 
 //! ################# NEW ###################
 const { uploadVideo, removeVideo } = require("../utils/uploadVideo");
@@ -16,6 +22,19 @@ const Section = require("../models/sectionsModel");
 const Coupon = require("../models/couponModel");
 const Subscription = require("../models/subscriptionModel");
 const Transaction = require("../models/transactionModel");
+
+const getCloudinaryPublicIdFromUrl = (url) => {
+  if (!url || typeof url !== "string") return null;
+
+  const uploadIndex = url.indexOf("/upload/");
+  if (uploadIndex === -1) return null;
+
+  const afterUpload = url.slice(uploadIndex + "/upload/".length);
+  const withoutVersion = afterUpload.replace(/^v\d+\//, "");
+  const withoutExtension = withoutVersion.replace(/\.[^.]+$/, "");
+
+  return withoutExtension || null;
+};
 
 const multerStorage = multer.memoryStorage();
 
@@ -438,8 +457,75 @@ exports.getAllcourse = catchAsync(async (req, res, next) => {
 });
 //
 exports.deleteCourse = catchAsync(async (req, res, next) => {
-  const course = await Course.findByIdAndDelete(req.params.courseId);
+  const course = await Course.findById(req.params.courseId);
   if (!course) return next(new AppError("المادة عير موجودة", 404));
+
+  if (
+    req.user.role === "teacher" &&
+    course.instructor.toString() !== req.user.id.toString()
+  ) {
+    return next(new AppError("ليس لديك الصلاحية لحذف هذه المادة", 403));
+  }
+
+  const sectionIds = course.sections.map((sectionId) => sectionId.toString());
+  const videos = await Video.find({ sectionId: { $in: sectionIds } }).select(
+    "_id url files",
+  );
+  const videoIds = videos.map((video) => video._id);
+  const fileIds = [...new Set(videos.flatMap((video) => video.files || []))];
+  const courseImagePublicId = getCloudinaryPublicIdFromUrl(course.imageCover);
+
+  const files = await Promise.all([
+    fileIds.length > 0
+      ? File.find({ _id: { $in: fileIds } }).select("_id url")
+      : [],
+  ]).then(([fileDocs]) => fileDocs);
+
+  if (courseImagePublicId) {
+    await cloudinary.uploader.destroy(courseImagePublicId, {
+      resource_type: "image",
+    });
+  }
+
+  await Promise.allSettled([
+    ...videos.map((video) => removeVideo(video.url)),
+    ...files.map((file) => {
+      const publicId = getCloudinaryPublicIdFromUrl(file.url);
+      if (!publicId) return Promise.resolve(null);
+      return cloudinary.uploader.destroy(publicId, { resource_type: "raw" });
+    }),
+  ]);
+
+  await Promise.all([
+    Comment.deleteMany({ course: course._id }),
+    Review.deleteMany({ course: course._id }),
+    Progress.deleteMany({ course: course._id }),
+    Notification.deleteMany({ courseId: course._id }),
+    Payment.deleteMany({ course: course._id }),
+    TelegramVipAccess.deleteMany({ course: course._id }),
+    Coupon.deleteMany({ courseId: course._id }),
+    Subscription.updateMany(
+      { courses: course._id },
+      { $pull: { courses: course._id } },
+    ),
+    User.updateMany(
+      {},
+      {
+        $pull: {
+          enrolledCourses: course._id,
+          publishedCourses: course._id,
+        },
+      },
+    ),
+  ]);
+
+  await Promise.all([
+    File.deleteMany({ _id: { $in: fileIds } }),
+    Video.deleteMany({ _id: { $in: videoIds } }),
+    Section.deleteMany({ _id: { $in: sectionIds } }),
+  ]);
+
+  await course.deleteOne();
   res.status(204).json({
     message: "تم الحذف بنجاح",
   });
