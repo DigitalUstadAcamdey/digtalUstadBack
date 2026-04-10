@@ -15,6 +15,7 @@ const cloudinary = require("./../config/cloudinary");
 const Section = require("../models/sectionsModel");
 const Coupon = require("../models/couponModel");
 const Subscription = require("../models/subscriptionModel");
+const Transaction = require("../models/transactionModel");
 
 const multerStorage = multer.memoryStorage();
 
@@ -31,7 +32,7 @@ const multerFilter = (req, file, cb) => {
   } else {
     cb(
       new AppError("يجب أن يكون الملف من نوع فيديو أو ملف أو صورة ", 400),
-      false
+      false,
     );
   }
 };
@@ -51,7 +52,7 @@ exports.optionalImageCoverForUpdateCourse = catchAsync(
       return next();
     }
     next();
-  }
+  },
 );
 
 exports.uploadCourseImageCover = catchAsync(async (req, res, next) => {
@@ -81,7 +82,7 @@ exports.uploadCourseImageCover = catchAsync(async (req, res, next) => {
           } else {
             resolve(result);
           }
-        }
+        },
       );
 
       stream.end(resizedImageBuffer);
@@ -111,7 +112,7 @@ exports.uploadCourseImageCover = catchAsync(async (req, res, next) => {
           } else {
             resolve(result);
           }
-        }
+        },
       );
 
       stream.end(resizedImageBuffer);
@@ -138,7 +139,7 @@ exports.createCourse = catchAsync(async (req, res, next) => {
     {
       new: true,
       runValidators: true,
-    }
+    },
   );
 
   res.status(201).json({
@@ -180,14 +181,34 @@ exports.updateCourseSections = catchAsync(async (req, res, next) => {
 
 exports.addVideoToSection = catchAsync(async (req, res, next) => {
   const teacher = await User.findById(req.user.id);
+  if (!teacher) {
+    return next(new AppError("المستخدم غير موجود", 404));
+  }
+
+  if (!req.file) {
+    return next(new AppError("يرجى تحميل ملف الفيديو في الحقل file", 400));
+  }
+
   const sectionId = req.params.sectionId;
+  const courseId = req.params.courseId;
   const section = await Section.findById(sectionId);
-  const { videoId, videoFormat } = await uploadVideo(req.body.title, req.file);
+  if (!section) {
+    return next(new AppError("القسم غير موجود", 404));
+  }
+
+  if (section.courseId.toString() !== courseId.toString()) {
+    return next(new AppError("القسم غير مرتبط بهذه الدورة", 400));
+  }
+
+  const { videoId, videoFormat, videoDuration } = await uploadVideo(
+    req.body.title,
+    req.file,
+  );
   console.log(videoId, videoFormat);
   const newVideo = await Video.create({
     lessonTitle: req.body.title,
     url: videoId,
-    duration: req.body.duration,
+    duration: req.body.duration || videoDuration,
     format: videoFormat,
     uploadedBy: teacher.id,
     sectionId: sectionId,
@@ -250,7 +271,7 @@ exports.deleteVideoFromSection = catchAsync(async (req, res, next) => {
   }
   // حذف الفيديو من القسم
   section.videos = section.videos.filter(
-    (v) => v.toString() !== video._id.toString()
+    (v) => v.toString() !== video._id.toString(),
   );
 
   await section.save();
@@ -268,7 +289,7 @@ exports.updateCourse = catchAsync(async (req, res, next) => {
     {
       new: true,
       runValidators: true,
-    }
+    },
   );
   res.status(200).json({
     message: "تم التحديث بنجاح",
@@ -334,8 +355,7 @@ exports.getCourseOverview = catchAsync(async (req, res, next) => {
         select: "title videos",
         populate: {
           path: "videos",
-          select:
-            "lessonTitle duration url",
+          select: "lessonTitle duration url",
         },
       },
       {
@@ -343,11 +363,12 @@ exports.getCourseOverview = catchAsync(async (req, res, next) => {
         select: "user createdAt rating content",
         options: { sort: { createdAt: -1 } },
       },
-    ]).lean()
-    
+    ])
+    .lean();
+
   if (!course) return next(new AppError("المادة غير موجودة", 404));
 
-  // extract the first video url 
+  // extract the first video url
   course.sections.forEach((section, sIndex) => {
     section.videos.forEach((video, vIndex) => {
       if (!(sIndex === 0 && vIndex === 0)) {
@@ -355,7 +376,7 @@ exports.getCourseOverview = catchAsync(async (req, res, next) => {
       }
     });
   });
-  
+
   res.status(200).json({
     message: "نجاح",
     course,
@@ -368,7 +389,8 @@ exports.getAllcourse = catchAsync(async (req, res, next) => {
     Course.find().populate([
       {
         path: "instructor",
-        select: " -publishedCourses -password -role -active -balance -enrolledCourses -progress",
+        select:
+          " -publishedCourses -password -role -active -balance -enrolledCourses -progress",
       },
       {
         path: "sections",
@@ -399,7 +421,7 @@ exports.getAllcourse = catchAsync(async (req, res, next) => {
         options: { sort: { createdAt: -1 } }, // ترتيب التقييمات من ��ديد الى قديم
       },
     ]),
-    req.query
+    req.query,
   )
     .filter()
     .sort()
@@ -437,7 +459,7 @@ exports.getMyCourses = catchAsync(async (req, res, next) => {
 });
 
 // enrolled student in course (without subscription)
-exports.enrollCourse =catchAsync(async (req, res, next) => {
+exports.enrollCourse = catchAsync(async (req, res, next) => {
   const courseId = req.params.courseId;
   const studentId = req.user.id;
   const { couponCode } = req.body;
@@ -471,7 +493,7 @@ exports.enrollCourse =catchAsync(async (req, res, next) => {
     await coupon.save();
   }
 
-  // simple balance check finalPrice > 0 && student.balance < finalPrice 
+  // simple balance check finalPrice > 0 && student.balance < finalPrice
   if (!(student.balance >= 0 && student.balance >= finalPrice)) {
     return next(new AppError("ليس لديك رصيد كاف للتسجيل في هذا الكورس", 400));
   }
@@ -482,7 +504,7 @@ exports.enrollCourse =catchAsync(async (req, res, next) => {
   await course.save();
 
   // update user info after enroll in course
-   await User.findByIdAndUpdate(
+  await User.findByIdAndUpdate(
     studentId,
     {
       $push: { enrolledCourses: courseId },
@@ -491,8 +513,21 @@ exports.enrollCourse =catchAsync(async (req, res, next) => {
     {
       new: true,
       runValidators: true,
-    }
+    },
   );
+
+  await Transaction.create({
+    userId: studentId,
+    type: "COURSE_PURCHASE",
+    amount: -finalPrice,
+    status: "SUCCESS",
+    paymentMethod: "BALANCE",
+    description: `شراء دورة: ${course.title}`,
+    metadata: {
+      courseId,
+      couponCode: couponCode || null,
+    },
+  });
 
   res.status(200).json({
     message: "تم التسجيل في الدورة بنجاح",
@@ -528,8 +563,8 @@ exports.enrollCourseWithSubscription = catchAsync(async (req, res, next) => {
   // add course to user's enrolledCourses
   user.enrolledCourses.push(courseId);
   await user.save({
-        validateBeforeSave: false,
-      });
+    validateBeforeSave: false,
+  });
 
   // add course to subscription.courses
   subscription.courses.push(courseId);
@@ -544,8 +579,6 @@ exports.enrollCourseWithSubscription = catchAsync(async (req, res, next) => {
     message: "تم التسجيل في الكورس عبر الاشتراك السنوي",
   });
 });
-
-
 
 // remove student from course
 exports.unenrollCourse = catchAsync(async (req, res, next) => {
@@ -644,7 +677,7 @@ exports.uploadFileToCloudinary = catchAsync(async (req, res, next) => {
         } else {
           resolve(result);
         }
-      }
+      },
     );
 
     stream.end(file.buffer);
@@ -723,7 +756,7 @@ exports.deleteFile = catchAsync(async (req, res, next) => {
   await file.deleteOne();
 
   video.files = video.files.filter(
-    (f) => f._id.toString() !== file._id.toString()
+    (f) => f._id.toString() !== file._id.toString(),
   );
 
   await video.save();
@@ -862,7 +895,7 @@ exports.deleteSection = catchAsync(async (req, res, next) => {
 
   // إزالة القسم من الدورة
   course.sections = course.sections.filter(
-    (s) => s._id.toString() !== section._id.toString()
+    (s) => s._id.toString() !== section._id.toString(),
   );
   await course.save();
 
