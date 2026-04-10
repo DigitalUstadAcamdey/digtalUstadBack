@@ -1,40 +1,62 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
-const TransactionSchema = new Schema({
-  userId: { 
-    type: Schema.Types.ObjectId, 
-    ref: "User", 
-    required: true 
-  },
+const TransactionSchema = new Schema(
+  {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
 
-  amount: { 
-    type: Number, 
-    required: true 
-  },
+    amount: {
+      type: Number,
+      required: true,
+    },
 
-  chargilyCheckoutId: {
-    type: String,
-    required: true
-  },
+    type: {
+      type: String,
+      enum: [
+        "TOP_UP",
+        "COURSE_PURCHASE",
+        "SUBSCRIPTION_PURCHASE",
+        "SUBSCRIPTION_RENEWAL",
+      ],
+      default: "TOP_UP",
+    },
 
-  status: {
-    type: String,
-    enum: ["PENDING", "SUCCESS", "FAILED"],
-    default: "PENDING"
-  },
+    chargilyCheckoutId: {
+      type: String,
+      default: null,
+      index: true,
+    },
 
-  paymentMethod: {
-    type: String, // CIB / EDAHABIA
-  },
+    status: {
+      type: String,
+      enum: ["PENDING", "SUCCESS", "FAILED"],
+      default: "PENDING",
+    },
 
-  metadata: {
-    type: Object, // بيانات إضافية من Chargily
-    default:null
-  },
-},{
-    timestamps:true
-});
+    paymentMethod: {
+      type: String, // CIB / EDAHABIA
+      enum: ["CIB", "EDAHABIA", "MANUAL", "BALANCE"],
+      default: null,
+    },
 
-const Transaction =  mongoose.model("Transaction", TransactionSchema);
-module.exports =  Transaction
+    description: {
+      type: String,
+      default: null,
+    },
+
+    metadata: {
+      type: Object, // بيانات إضافية من Chargily
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
+const Transaction = mongoose.model("Transaction", TransactionSchema);
+module.exports = Transaction;

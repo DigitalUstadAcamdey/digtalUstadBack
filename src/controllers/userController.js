@@ -5,6 +5,7 @@ const APIFeaturs = require("./../utils/apiFeaturs");
 const multer = require("multer");
 const cloudinary = require("./../config/cloudinary");
 const sharp = require("sharp");
+const Transaction = require("../models/transactionModel");
 
 // upload files
 const multerStorage = multer.memoryStorage();
@@ -22,7 +23,7 @@ const multerFilter = (req, file, cb) => {
   } else {
     cb(
       new AppError("يجب أن يكون الملف من نوع فيديو أو ملف أو صورة ", 400),
-      false
+      false,
     );
   }
 };
@@ -51,14 +52,14 @@ exports.uploadUserThumbnail = catchAsync(async (req, res, next) => {
   // رفع الصورة إلى Cloudinary
   const result = await new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { resource_type: "image" , folder:'users_imgs' },
+      { resource_type: "image", folder: "users_imgs" },
       (error, result) => {
         if (error) {
           reject(error);
         } else {
           resolve(result);
         }
-      }
+      },
     );
 
     stream.end(resizedImageBuffer);
@@ -97,7 +98,7 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
     {
       new: true,
       runValidators: true,
-    }
+    },
   );
   res.status(204).json({
     message: "تم التحديث بنجاح",
@@ -105,7 +106,6 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
 });
 
 exports.getMe = catchAsync(async (req, res, next) => {
-
   const user = await User.findById(req.user.id)
     .select("-password")
     .populate([
@@ -261,13 +261,59 @@ exports.addBalance = catchAsync(async (req, res, next) => {
     {
       new: true,
       runValidators: true,
-    }
+    },
   );
   if (!user) {
     return next(new AppError("المستخدم غير موجود", 404));
   }
+
+  await Transaction.create({
+    userId: req.params.id,
+    type: "TOP_UP",
+    amount: req.body.balance,
+    status: "SUCCESS",
+    paymentMethod: "MANUAL",
+    description: "شحن رصيد يدوي من الإدارة",
+    metadata: {
+      source: "admin",
+      adminId: req.user.id,
+    },
+  });
+
   res.status(200).json({
     message: "تم إضافة المبلغ بنجاح",
     user,
+  });
+});
+
+exports.getMyTransactions = catchAsync(async (req, res, next) => {
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 100);
+  const skip = (page - 1) * limit;
+
+  const query = { userId: req.user.id };
+
+  if (req.query.status) {
+    query.status = String(req.query.status).toUpperCase();
+  }
+
+  if (req.query.type) {
+    query.type = String(req.query.type).toUpperCase();
+  }
+
+  const [transactions, total] = await Promise.all([
+    Transaction.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Transaction.countDocuments(query),
+  ]);
+
+  const totalPages = Math.ceil(total / limit) || 1;
+
+  res.status(200).json({
+    message: "تم جلب سجل المعاملات بنجاح",
+    results: transactions.length,
+    page,
+    total,
+    totalPages,
+    transactions,
   });
 });

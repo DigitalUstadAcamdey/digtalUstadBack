@@ -14,6 +14,7 @@ const {
   searchUsers,
   UpdateStatusUser,
   addBalance,
+  getMyTransactions,
 } = require("../controllers/userController");
 const { prmission, restrictTo } = require("../controllers/authController");
 
@@ -27,10 +28,16 @@ router.patch(
   prmission,
   uploadThumbnail,
   uploadUserThumbnail,
-  updateMe
+  updateMe,
 );
 router.delete("/deleteMe", prmission, deleteMe);
 router.patch("/updatePassword", prmission, updatePassword);
+router.get(
+  "/transactions",
+  prmission,
+  restrictTo("student"),
+  getMyTransactions,
+);
 
 //section course
 router

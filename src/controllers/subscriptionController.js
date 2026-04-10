@@ -1,6 +1,7 @@
 const Coupon = require("../models/couponModel");
 const Subscription = require("../models/subscriptionModel");
 const User = require("../models/userModel");
+const Transaction = require("../models/transactionModel");
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
 const { subscriptionPrice } = require("../config/config");
@@ -15,7 +16,6 @@ exports.createSubscription = catchAsync(async (req, res, next) => {
   // check if user exists
   if (!user) return next(new AppError("المستخدم غير موجود", 404));
 
-  
   const existingSub = await Subscription.findOne({
     user: userId,
     status: "active",
@@ -27,26 +27,27 @@ exports.createSubscription = catchAsync(async (req, res, next) => {
   }
 
   const { couponCode } = req.body;
-let finalPrice = subscriptionPrice;
-// apply coupon 
+  let finalPrice = subscriptionPrice;
+  // apply coupon
   if (couponCode) {
     const coupon = await Coupon.findOne({
       code: couponCode,
     });
-    // check coupon 
+    // check coupon
     if (!coupon) return next(new AppError("الكوبون غير صحيح", 400));
     // check validity
     if (!coupon.isValid())
       return next(new AppError("الكوبون غير صالح أو منتهي", 400));
     // calculate final price
     finalPrice =
-      subscriptionPrice - (subscriptionPrice * coupon.discountAsPercentage) / 100;
+      subscriptionPrice -
+      (subscriptionPrice * coupon.discountAsPercentage) / 100;
     // update coupon usage
     coupon.usedCount += 1;
     await coupon.save();
   }
 
-  // simple balance check finalPrice > 0 && user.balance < finalPrice 
+  // simple balance check finalPrice > 0 && user.balance < finalPrice
   if (!(user.balance >= 0 && user.balance >= finalPrice)) {
     return next(new AppError("ليس لديك رصيد كاف لعمل إشتراك سنوي ", 400));
   }
@@ -58,22 +59,35 @@ let finalPrice = subscriptionPrice;
 
   const subscription = await Subscription.create({
     user: userId,
-    courses:[],// intially empty
+    courses: [], // intially empty
     startDate,
     endDate,
     status: "active",
   });
   // update user balance after successful subscription
   await User.findByIdAndUpdate(
-      userId,
-      {
-        $inc: { balance: -finalPrice },
-      },
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
+    userId,
+    {
+      $inc: { balance: -finalPrice },
+    },
+    {
+      new: true,
+      runValidators: true,
+    },
+  );
+
+  await Transaction.create({
+    userId,
+    type: "SUBSCRIPTION_PURCHASE",
+    amount: -finalPrice,
+    status: "SUCCESS",
+    paymentMethod: "BALANCE",
+    description: "شراء اشتراك سنوي",
+    metadata: {
+      subscriptionId: subscription._id,
+      couponCode: couponCode || null,
+    },
+  });
 
   res.status(201).json({
     message: "تم إنشاء الاشتراك السنوي بنجاح",
@@ -86,13 +100,13 @@ let finalPrice = subscriptionPrice;
  */
 exports.renewSubscription = catchAsync(async (req, res, next) => {
   const userId = req.user.id;
-  const {subscriptionId} = req.params;
-  
+  const { subscriptionId } = req.params;
+
   const user = await User.findById(userId);
   // check if user exists
   if (!user) return next(new AppError("المستخدم غير موجود", 404));
   // check if already has  subscription?
- const existingSub = await Subscription.findById(subscriptionId);
+  const existingSub = await Subscription.findById(subscriptionId);
   if (!existingSub) {
     return next(new AppError("لا يوجد اشتراك بهذا المعرف", 404));
   }
@@ -121,29 +135,43 @@ exports.renewSubscription = catchAsync(async (req, res, next) => {
   // update user balance after successful subscription
   // push the old courses to the renewed subscription
   await User.findByIdAndUpdate(
-      userId,
-      {
-        $inc: { balance: -subscriptionPrice },
-        $addToSet: { enrolledCourses: existingSub.courses }
-      },
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
+    userId,
+    {
+      $inc: { balance: -subscriptionPrice },
+      $addToSet: { enrolledCourses: existingSub.courses },
+    },
+    {
+      new: true,
+      runValidators: true,
+    },
+  );
+
+  await Transaction.create({
+    userId,
+    type: "SUBSCRIPTION_RENEWAL",
+    amount: -subscriptionPrice,
+    status: "SUCCESS",
+    paymentMethod: "BALANCE",
+    description: "تجديد اشتراك سنوي",
+    metadata: {
+      subscriptionId: existingSub._id,
+    },
+  });
+
   res.status(201).json({
     message: "تم تجديد الاشتراك السنوي بنجاح",
     subscription,
   });
-})
+});
 /**
  * GET my subscription
  */
 exports.getMySubscription = catchAsync(async (req, res, next) => {
   const userId = req.user.id;
 
-  const subscription = await Subscription.findOne({ user: userId })
-    .sort({ createdAt: -1 });
+  const subscription = await Subscription.findOne({ user: userId }).sort({
+    createdAt: -1,
+  });
 
   if (!subscription) {
     return next(new AppError("لا يوجد اشتراك لهذا المستخدم", 404));
