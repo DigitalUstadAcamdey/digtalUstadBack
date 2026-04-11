@@ -72,26 +72,6 @@ exports.uploadUserThumbnail = catchAsync(async (req, res, next) => {
   next();
 });
 
-exports.updateProfilePicture = catchAsync(async (req, res, next) => {
-  if (!req.body.thumbnail) {
-    return next(new AppError("يرجى رفع صورة الملف الشخصي", 400));
-  }
-
-  const user = await User.findByIdAndUpdate(
-    req.user.id,
-    { thumbnail: req.body.thumbnail },
-    {
-      new: true,
-      runValidators: true,
-    },
-  ).select("-password");
-
-  res.status(200).json({
-    message: "تم تحديث الصورة الشخصية بنجاح",
-    user,
-  });
-});
-
 exports.updateMe = catchAsync(async (req, res, next) => {
   if (
     req.body.role ||

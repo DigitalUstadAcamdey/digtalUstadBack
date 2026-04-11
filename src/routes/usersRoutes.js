@@ -10,7 +10,6 @@ const {
   getMe,
   uploadThumbnail,
   uploadUserThumbnail,
-  updateProfilePicture,
   updatePassword,
   searchUsers,
   UpdateStatusUser,
@@ -30,13 +29,6 @@ router.patch(
   uploadThumbnail,
   uploadUserThumbnail,
   updateMe,
-);
-router.patch(
-  "/profile-picture",
-  prmission,
-  uploadThumbnail,
-  uploadUserThumbnail,
-  updateProfilePicture,
 );
 router.delete("/deleteMe", prmission, deleteMe);
 router.patch("/updatePassword", prmission, updatePassword);
