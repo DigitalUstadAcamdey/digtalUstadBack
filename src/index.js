@@ -22,47 +22,58 @@ const commentRoutes = require("./routes/commentRoutes");
 const adminRoutes = require("./routes/admin.route");
 const teacherRoutes = require("./routes/teacher.route");
 const couponRoutes = require("./routes/coupon.route");
-const notificationRoutes = require("./routes/notification.route")
+const notificationRoutes = require("./routes/notification.route");
 const subscriptionRoutes = require("./routes/subscritption.route");
 const chargilyRoutes = require("./routes/chargily.route");
 const { addWebhook } = require("./controllers/chargily.controller");
 const todoRoutes = require("./routes/todo.route");
 
-
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://e-learning-platform-eosin.vercel.app",
+  "https://www.digitalustadacademy.com",
+  "https://digitalustadacademy.com",
+  "https://quiet-bats-tap.loca.lt",
+  "https://1686134b9a15.ngrok-free.app",
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  exposedHeaders: ["Set-Cookie"],
+  optionsSuccessStatus: 200,
+};
+
 // for reading req.body
-app.post('/api/chargily/webhook', express.raw({ type: '*/*' }) ,addWebhook);
+app.post("/api/chargily/webhook", express.raw({ type: "*/*" }), addWebhook);
 
-app.set('trust proxy', 1); //  for traefik proxy
-
+app.set("trust proxy", 1); //  for traefik proxy
 
 //setup socket.io
 const server = http.createServer(app);
 
-app.use(helmet({
-  // disable some Rules
-  crossOriginResourcePolicy: { policy: "cross-origin" }, // enable the imgs , videos , other files form difreent
+app.use(
+  helmet({
+    // disable some Rules
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // enable the imgs , videos , other files form difreent
     crossOriginEmbedderPolicy: false, // allow the iframes , videos in Frontend
     contentSecurityPolicy: false, // disable the CSP
-}));
-
-//cors
-app.use(
-  cors({
-
-    origin:[
-      "http://localhost:3000",
-      "https://e-learning-platform-eosin.vercel.app",
-      "https://www.digitalustadacademy.com",
-      "https://quiet-bats-tap.loca.lt"
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-    exposedHeaders: ["Set-Cookie"],
-  })
+  }),
 );
+
+// cors
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 // for all routes
 const generalLimiter = rateLimit({
@@ -70,7 +81,7 @@ const generalLimiter = rateLimit({
   max: 300,
   message: {
     status: "fail",
-    message: "Too many requests from this IP. Please try again later."
+    message: "Too many requests from this IP. Please try again later.",
   },
 });
 
@@ -87,19 +98,13 @@ if (process.env.NODE_ENV === "production") {
   app.use("/api/auth/login", authLimiter);
 }
 
-
-
 app.use(express.json({ limit: "10kb" }));
 
 const io = socketIo(server, {
   cors: {
-    origin: [
-      "http://localhost:3000",
-      "https://e-learning-platform-eosin.vercel.app",
-      "https://www.digitalustadacademy.com",
-      "https://1686134b9a15.ngrok-free.app"
-    ],
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
 
@@ -140,11 +145,10 @@ app.use("/api/comments", commentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/teacher", teacherRoutes);
 app.use("/api/coupons", couponRoutes);
-app.use("/api/notification", notificationRoutes)
+app.use("/api/notification", notificationRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
-app.use("/api/chargily", chargilyRoutes)
+app.use("/api/chargily", chargilyRoutes);
 app.use("/api/todos", todoRoutes);
-
 
 //defined 404 middleware (page not found)
 app.all("*", (req, res, next) => {
