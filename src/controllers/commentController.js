@@ -49,7 +49,7 @@ exports.addComment = catchAsync(async (req, res, next) => {
   // إنشاء التعليق
   const newcomment = await Comment.create(req.body);
   const comment = await Comment.findById(newcomment.id).select(
-    "-course -video -__v"
+    "-course -video -__v",
   );
 
   video.comments.push(comment._id);
@@ -69,7 +69,7 @@ exports.addComment = catchAsync(async (req, res, next) => {
       section.videos.findIndex((lesson) => lesson.id === video.id) + 1, //error in section
   });
 
-   await Notification.create({
+  await Notification.create({
     user: course.instructor,
     courseId: course.id,
     courseImage: course.imageCover,
@@ -145,7 +145,7 @@ exports.deleteComment = catchAsync(async (req, res, next) => {
   await comment.deleteOne();
 
   video.comments = video.comments.filter(
-    (commentIdInVideo) => commentIdInVideo.toString() !== commentId
+    (commentIdInVideo) => commentIdInVideo.toString() !== commentId,
   );
   await video.save();
 
@@ -155,7 +155,7 @@ exports.deleteComment = catchAsync(async (req, res, next) => {
   });
 });
 
-// for teacher
+// for teacher and student
 exports.addReply = catchAsync(async (req, res, next) => {
   const { commentId } = req.params;
   const { text } = req.body;
@@ -164,33 +164,38 @@ exports.addReply = catchAsync(async (req, res, next) => {
   if (!user) return next(new AppError("المستخدم غير موجود", 404));
 
   // البحث عن التعليق
-  const comment = await Comment.findById(commentId).populate({
-    path: "replies",
-    populate: {
-      path: "user",
-    },
-  }).populate({
-    path: "video",
-    select: "sectionId title id"
-  });
+  const comment = await Comment.findById(commentId)
+    .populate({
+      path: "replies",
+      populate: {
+        path: "user",
+      },
+    })
+    .populate({
+      path: "video",
+      select: "sectionId title id",
+    });
 
   if (!comment) return next(new AppError("التعليق غير موجود", 404));
 
   comment.replies.push({ user: req.user._id, text });
   await comment.save();
 
-  const updatedComment = await Comment.findById(commentId).populate({
-    path: "replies",
-    populate: {
-      path: "user",
-    },
-  }).populate({
-    path: "video",
-    select: "sectionId title id"
-  })
+  const updatedComment = await Comment.findById(commentId)
+    .populate({
+      path: "replies",
+      populate: {
+        path: "user",
+      },
+    })
+    .populate({
+      path: "video",
+      select: "sectionId title id",
+    });
 
   const course = await Course.findById(comment.course);
   if (!course) return next(new AppError("لا توجد هذه المادة", 404));
+  const actorLabel = user.role === "teacher" ? "الأستاذ" : "الطالب";
 
   //send with socket.io
   const io = req.app.get("socketio");
@@ -200,14 +205,14 @@ exports.addReply = catchAsync(async (req, res, next) => {
     user: {
       id: user.id,
       username: user.username,
-      thumbnail: user.thumbnail
+      thumbnail: user.thumbnail,
     },
     videoId: comment.video.id,
     courseImage: course.imageCover,
     courseId: course.id,
-    comment : {
+    comment: {
       id: comment.id,
-      text: comment.text
+      text: comment.text,
     },
     lessonNumber: 10,
     //   course.videos.findIndex(
@@ -215,15 +220,15 @@ exports.addReply = catchAsync(async (req, res, next) => {
     //   ) + 1,
   });
   const student = await User.findById(comment.user);
-  console.log('this is the sectionId' , comment.video.sectionId);
+  console.log("this is the sectionId", comment.video.sectionId);
 
-   await Notification.create({
+  await Notification.create({
     user: student,
     courseId: course,
     videoId: comment.video.id,
     sectionId: comment.video.sectionId,
     courseImage: course.imageCover,
-    message: ` تم إضافة رد من طرف الأستاذ ${user.username}`,
+    message: `تم إضافة رد من طرف ${actorLabel} ${user.username}`,
     lessonNumber: 10,
     // course.videos.findIndex(
     //   (lesson) => lesson.id === comment.video._id.toString()
@@ -265,19 +270,19 @@ exports.getCommentsInLesson = catchAsync(async (req, res, next) => {
 
 exports.deleteReply = catchAsync(async (req, res, next) => {
   const { commentId, replyId } = req.params;
-  
+
   const comment = await Comment.findById(commentId);
 
   if (!comment) return next(new AppError("التعليق غير موجود", 404));
 
   const reply = comment.replies.id(replyId);
   if (!reply) return next(new AppError("الرد غير موجود", 404));
- 
+
   if (reply.user._id.toString() !== req.user._id.toString())
     return next(new AppError("ليس لديك الصلاحية لحذف هذا الرد", 403));
- 
+
   reply.remove();
-  
+
   await comment.save();
 
   res.status(204).json({
@@ -294,10 +299,10 @@ exports.updateReply = catchAsync(async (req, res, next) => {
   if (!comment) return next(new AppError("التعليق غير موجود", 404));
   const reply = comment.replies.id(replyId);
   if (!reply) return next(new AppError("الرد غير موجود", 404));
-  
+
   if (reply.user._id.toString() !== req.user._id.toString())
     return next(new AppError("ليس لديك الصلاحية لتعديل هذا الرد", 403));
- 
+
   reply.text = text;
 
   await comment.save();
@@ -308,5 +313,3 @@ exports.updateReply = catchAsync(async (req, res, next) => {
     comment,
   });
 });
-
-
