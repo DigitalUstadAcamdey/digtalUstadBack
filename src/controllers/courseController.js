@@ -376,10 +376,16 @@ exports.getCourse = catchAsync(async (req, res, next) => {
             {
               path: "comments",
               select: "user text replies createdAt",
-              populate: {
-                path: "replies.user",
-                select: "username thumbnail createdAt",
-              },
+              populate: [
+                {
+                  path: "user",
+                  select: "username thumbnail createdAt",
+                },
+                {
+                  path: "replies.user",
+                  select: "username thumbnail createdAt",
+                },
+              ],
             },
             {
               path: "files",

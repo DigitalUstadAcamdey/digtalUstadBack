@@ -19,6 +19,6 @@ router
 
 router
   .route("/:commentId/replies")
-  .post(prmission, restrictTo("teacher", "student"), addReply);
+  .post(prmission, restrictTo("teacher"), addReply);
 
 module.exports = router;

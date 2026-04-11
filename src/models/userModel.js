@@ -73,7 +73,7 @@ const userSchema = new Schema({
     type: Number,
     default: 0, // القيمة الافتراضية للرصيد هي 0
     min: 0, // تأكد من أن الرصيد لا يكون سالبًا
-  }, 
+  },
   lastLogin: {
     type: Date,
     default: Date.now,
