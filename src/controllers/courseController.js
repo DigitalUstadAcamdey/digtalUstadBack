@@ -43,6 +43,36 @@ const getFileExtension = (filename) => {
   return ext.toLowerCase();
 };
 
+const generateSignedFileUrl = (file, expiresAt) => {
+  const publicId = file?.publicId || getCloudinaryPublicIdFromUrl(file?.url);
+  if (!publicId) return null;
+
+  const extension = getFileExtension(file?.filename);
+  const deliveryType = file?.deliveryType || "authenticated";
+  const signedExpiry = expiresAt || Math.floor(Date.now() / 1000) + 60 * 5;
+
+  try {
+    const url = cloudinary.utils.private_download_url(publicId, extension, {
+      resource_type: "raw",
+      type: deliveryType,
+      expires_at: signedExpiry,
+      attachment: true,
+      filename_override: file?.filename,
+    });
+
+    return { url, expiresAt: signedExpiry };
+  } catch (error) {
+    const url = cloudinary.url(publicId, {
+      resource_type: "raw",
+      type: deliveryType,
+      secure: true,
+      sign_url: true,
+    });
+
+    return { url, expiresAt: signedExpiry };
+  }
+};
+
 const multerStorage = multer.memoryStorage();
 
 const multerFilter = (req, file, cb) => {
@@ -353,7 +383,7 @@ exports.getCourse = catchAsync(async (req, res, next) => {
             },
             {
               path: "files",
-              select: "filename size format",
+              select: "filename size format publicId deliveryType url",
             },
           ],
         },
@@ -367,6 +397,26 @@ exports.getCourse = catchAsync(async (req, res, next) => {
     ])
     .lean();
   if (!course) return next(new AppError("المادة غير موجودة", 404));
+
+  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 5;
+  course.sections = (course.sections || []).map((section) => ({
+    ...section,
+    videos: (section.videos || []).map((video) => ({
+      ...video,
+      files: (video.files || []).map((file) => {
+        const signed = generateSignedFileUrl(file, expiresAt);
+        return {
+          _id: file._id,
+          filename: file.filename,
+          size: file.size,
+          format: file.format,
+          accessUrl: signed?.url || null,
+          accessUrlExpiresAt: signed?.expiresAt || null,
+        };
+      }),
+    })),
+  }));
+
   res.status(200).json({
     message: "نجاح",
     course,
@@ -824,31 +874,15 @@ exports.getProtectedFileUrl = catchAsync(async (req, res, next) => {
   }
 
   const expiresAt = Math.floor(Date.now() / 1000) + 60 * 5;
-  const extension = getFileExtension(file.filename);
-  const deliveryType = file.deliveryType || "authenticated";
-
-  let signedUrl;
-  try {
-    signedUrl = cloudinary.utils.private_download_url(publicId, extension, {
-      resource_type: "raw",
-      type: deliveryType,
-      expires_at: expiresAt,
-      attachment: true,
-      filename_override: file.filename,
-    });
-  } catch (error) {
-    signedUrl = cloudinary.url(publicId, {
-      resource_type: "raw",
-      type: deliveryType,
-      secure: true,
-      sign_url: true,
-    });
+  const signed = generateSignedFileUrl(file, expiresAt);
+  if (!signed?.url) {
+    return next(new AppError("تعذر توليد رابط آمن لهذا الملف", 500));
   }
 
   res.status(200).json({
     message: "تم توليد رابط تحميل آمن",
-    url: signedUrl,
-    expiresAt,
+    url: signed.url,
+    expiresAt: signed.expiresAt,
   });
 });
 
@@ -929,12 +963,12 @@ exports.deleteFile = catchAsync(async (req, res, next) => {
   video.files = video.files.filter(
     (f) => f._id.toString() !== file._id.toString(),
   );
+  await video.save();
 
-  select: ("filename size format",
-    // استجابة النجاح
-    res.status(200).json({
-      message: "تم حذف الملف بنجاح",
-    }));
+  // استجابة النجاح
+  res.status(200).json({
+    message: "تم حذف الملف بنجاح",
+  });
 }); // file is not deleted from cloudinary
 
 // mark is completed  and update progress
