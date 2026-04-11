@@ -45,12 +45,13 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
+    console.warn(`[CORS] Blocked origin: ${origin}`);
+    return callback(null, false);
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   exposedHeaders: ["Set-Cookie"],
+  preflightContinue: false,
   optionsSuccessStatus: 200,
 };
 
