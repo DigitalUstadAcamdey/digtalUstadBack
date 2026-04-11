@@ -33,16 +33,20 @@ const upload = multer({
   fileFilter: multerFilter,
 });
 
-exports.uploadThumbnail = upload.single("thumbnail");
+exports.uploadThumbnail = upload.fields([
+  { name: "thumbnail", maxCount: 1 },
+  { name: "profilePic", maxCount: 1 },
+]);
 
 //Uploads a image Cover
 exports.uploadUserThumbnail = catchAsync(async (req, res, next) => {
-  if (!req.file) {
+  const file =
+    req.files?.thumbnail?.[0] || req.files?.profilePic?.[0] || req.file;
+
+  if (!file) {
     return next();
   }
   // رفع كل صورة إلى Cloudinary والحصول على روابط الصور
-
-  const file = req.file;
 
   // تعديل حجم الصورة باستخدام Sharp
   const resizedImageBuffer = await sharp(file.buffer)
@@ -66,6 +70,26 @@ exports.uploadUserThumbnail = catchAsync(async (req, res, next) => {
   });
   req.body.thumbnail = result.secure_url;
   next();
+});
+
+exports.updateProfilePicture = catchAsync(async (req, res, next) => {
+  if (!req.body.thumbnail) {
+    return next(new AppError("يرجى رفع صورة الملف الشخصي", 400));
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user.id,
+    { thumbnail: req.body.thumbnail },
+    {
+      new: true,
+      runValidators: true,
+    },
+  ).select("-password");
+
+  res.status(200).json({
+    message: "تم تحديث الصورة الشخصية بنجاح",
+    user,
+  });
 });
 
 exports.updateMe = catchAsync(async (req, res, next) => {

@@ -44,6 +44,10 @@ const multerFilter = (req, file, cb) => {
     file.mimetype.startsWith("image/") ||
     file.mimetype === "application/pdf" || // ملفات PDF
     file.mimetype === "application/msword" || // ملفات Word (DOC)
+    file.mimetype === "application/zip" || // ملفات ZIP
+    file.mimetype === "application/x-zip-compressed" || // ملفات ZIP (بعض المتصفحات)
+    file.mimetype === "application/vnd.rar" || // ملفات RAR
+    file.mimetype === "application/x-rar-compressed" || // ملفات RAR (الأكثر شيوعًا)
     file.mimetype ===
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document" // ملفات Word الحديثة (DOCX)
   ) {

@@ -86,6 +86,29 @@ const safeUnlink = (filePath) => {
   fs.unlink(filePath, () => {});
 };
 
+const getVideoFormat = (file, videoDetails) => {
+  // Bunny details may not always include mediaType, so prefer reliable local file metadata.
+  const fromMime =
+    typeof file?.mimetype === "string" && file.mimetype.startsWith("video/")
+      ? file.mimetype.split("/")[1]
+      : null;
+
+  const fromOriginalName =
+    typeof file?.originalname === "string" && file.originalname.includes(".")
+      ? file.originalname.split(".").pop()
+      : null;
+
+  const fromBunny =
+    videoDetails?.mediaType || videoDetails?.container || videoDetails?.format;
+
+  const normalized = (fromMime || fromOriginalName || fromBunny || "mp4")
+    .toString()
+    .trim()
+    .toLowerCase();
+
+  return normalized || "mp4";
+};
+
 exports.uploadVideo = async (title, file) => {
   if (!file?.path) {
     throw new AppError("يرجى تحميل ملف الفيديو في الحقل file", 400);
@@ -151,7 +174,7 @@ exports.uploadVideo = async (title, file) => {
     );
 
     const videoDetails = videoDetailsResponse.data;
-    const videoFormat = videoDetails.mediaType || "unknown"; // تنسيق الفيديو
+    const videoFormat = getVideoFormat(file, videoDetails);
     const videoDuration = videoDetails.length;
     return {
       videoId,
