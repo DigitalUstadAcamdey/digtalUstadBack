@@ -10,9 +10,20 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.digitalustad.rule=Host(`api.digitalustadacademy.com`)" # replace the api.localhost with my domain name 'api.digitalustadacaedmy.com' , the HostRegexp(`{any:.*}`) for running ngrok app
       - "traefik.http.services.digitalustad.loadbalancer.server.port=5000"
+      - "traefik.http.services.digitalustad.loadbalancer.passhostheader=true"
+      - "traefik.http.services.digitalustad.loadbalancer.serversTransport=digitalustad-transport"
       - "traefik.http.routers.digitalustad.entrypoints=websecure"
       - "traefik.http.routers.digitalustad.tls=true"
       - "traefik.http.routers.digitalustad.tls.certresolver=letsencrypt" # for testing ssl in local type `selfsigned`  or `letsencrypt`
+      - "traefik.http.routers.digitalustad.middlewares=digitalustad-cors"
+      - "traefik.http.middlewares.digitalustad-cors.headers.accessControlAllowOriginList=https://www.digitalustadacademy.com,https://digitalustadacademy.com,http://localhost:3000"
+      - "traefik.http.middlewares.digitalustad-cors.headers.accessControlAllowMethods=GET,POST,PUT,PATCH,DELETE,OPTIONS"
+      - "traefik.http.middlewares.digitalustad-cors.headers.accessControlAllowHeaders=Content-Type,Authorization,X-Requested-With"
+      - "traefik.http.middlewares.digitalustad-cors.headers.accessControlAllowCredentials=true"
+      - "traefik.http.middlewares.digitalustad-cors.headers.addVaryHeader=true"
+      - "traefik.http.serversTransports.digitalustad-transport.forwardingTimeouts.dialTimeout=30s"
+      - "traefik.http.serversTransports.digitalustad-transport.forwardingTimeouts.responseHeaderTimeout=600s"
+      - "traefik.http.serversTransports.digitalustad-transport.forwardingTimeouts.idleConnTimeout=600s"
     networks:
       - traefik-network
     depends_on:
@@ -27,6 +38,8 @@ services:
       - "--providers.docker=true"
       - "--api.dashboard=true"
       - "--api.insecure=false"
+      - "--log.level=INFO"
+      - "--accesslog=true"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
