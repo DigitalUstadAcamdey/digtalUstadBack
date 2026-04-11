@@ -16,6 +16,7 @@ const {
   addFile,
   uploadFile,
   uploadFileToCloudinary,
+  getProtectedFileUrl,
   uploadUpdateImageCover,
   optionalImageCoverForUpdateCourse,
   isCompleted,
@@ -62,7 +63,7 @@ router
     uploadCourseFile,
     optionalImageCoverForUpdateCourse,
     uploadCourseImageCover,
-    createCourse
+    createCourse,
   )
   .get(getAllcourse);
 
@@ -78,10 +79,10 @@ router
 // add the middleware to check if the user is enrolled in the course or not
 // note: this route using in /course-overview/:courseId frontend route to show course overview to not enrolled users
 // add endpoint to get course details for not enrolled users
-router.route('/course-overview/:courseId').get(getCourseOverview);
+router.route("/course-overview/:courseId").get(getCourseOverview);
 router
   .route("/:courseId")
-  .get(prmission,checkCourseAccess,getCourse)
+  .get(prmission, checkCourseAccess, getCourse)
   .post(prmission, restrictTo("teacher"), updateCourseSections)
   .patch(
     prmission,
@@ -89,7 +90,7 @@ router
     uploadUpdateImageCover,
     optionalImageCoverForUpdateCourse,
     uploadCourseImageCover,
-    updateCourse
+    updateCourse,
   )
   .delete(prmission, restrictTo("admin", "teacher"), deleteCourse);
 
@@ -106,7 +107,7 @@ router.post(
   prmission,
   restrictTo("teacher"),
   setUploads,
-  addVideoToSection
+  addVideoToSection,
 );
 router
   .route("/:courseId/sections/:sectionId/videos/:videoId")
@@ -115,9 +116,24 @@ router
 
 //enrolled in course
 
-router.post("/enrolled/:courseId",prmission, restrictTo("student"), enrollCourse) // enrolled without subscription
-router.post("/enrolled-with-subscription/:courseId",prmission, restrictTo("student"), enrollCourseWithSubscription) // enrolled with subscription
-router.delete("/unenrolled/:courseId",prmission, restrictTo("student"), unenrollCourse); // switch POST to PUT or PATCH or DELETE
+router.post(
+  "/enrolled/:courseId",
+  prmission,
+  restrictTo("student"),
+  enrollCourse,
+); // enrolled without subscription
+router.post(
+  "/enrolled-with-subscription/:courseId",
+  prmission,
+  restrictTo("student"),
+  enrollCourseWithSubscription,
+); // enrolled with subscription
+router.delete(
+  "/unenrolled/:courseId",
+  prmission,
+  restrictTo("student"),
+  unenrollCourse,
+); // switch POST to PUT or PATCH or DELETE
 
 // update isComplete video
 router
@@ -142,12 +158,19 @@ router
     restrictTo("teacher"),
     uploadFile,
     uploadFileToCloudinary,
-    addFile
+    addFile,
   );
 
 router
   .route("/:courseId/sections/:sectionId/videos/:videoId/files/:fileId")
   .delete(prmission, restrictTo("teacher"), deleteFile);
+
+router.get(
+  "/:courseId/sections/:sectionId/videos/:videoId/files/:fileId/access-url",
+  prmission,
+  checkCourseAccess,
+  getProtectedFileUrl,
+);
 
 // comments section
 

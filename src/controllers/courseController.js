@@ -36,6 +36,13 @@ const getCloudinaryPublicIdFromUrl = (url) => {
   return withoutExtension || null;
 };
 
+const getFileExtension = (filename) => {
+  if (!filename || typeof filename !== "string") return undefined;
+  const ext = filename.split(".").pop();
+  if (!ext || ext === filename) return undefined;
+  return ext.toLowerCase();
+};
+
 const multerStorage = multer.memoryStorage();
 
 const multerFilter = (req, file, cb) => {
@@ -346,7 +353,7 @@ exports.getCourse = catchAsync(async (req, res, next) => {
             },
             {
               path: "files",
-              select: "filename size url format",
+              select: "filename size format",
             },
           ],
         },
@@ -760,6 +767,7 @@ exports.uploadFileToCloudinary = catchAsync(async (req, res, next) => {
         resource_type: "raw",
         folder: "course-files",
         public_id: fileName,
+        type: "authenticated",
       },
       (error, result) => {
         if (error) {
@@ -775,8 +783,73 @@ exports.uploadFileToCloudinary = catchAsync(async (req, res, next) => {
 
   req.body.url = result.secure_url;
   req.body.size = result.bytes;
+  req.body.filename = req.body.filename || file.originalname;
+  req.body.publicId = result.public_id;
+  req.body.deliveryType = result.type || "authenticated";
+  req.body.format = req.body.format || file.mimetype;
 
   next();
+});
+
+exports.getProtectedFileUrl = catchAsync(async (req, res, next) => {
+  const { courseId, sectionId, videoId, fileId } = req.params;
+
+  const [course, section, video, file] = await Promise.all([
+    Course.findById(courseId),
+    Section.findById(sectionId),
+    Video.findById(videoId),
+    File.findById(fileId),
+  ]);
+
+  if (!course) return next(new AppError("المادة غير موجودة", 404));
+  if (!section) return next(new AppError("القسم غير موجود", 404));
+  if (!video) return next(new AppError("الدرس غير موجود", 404));
+  if (!file) return next(new AppError("الملف غير موجود", 404));
+
+  if (section.courseId.toString() !== courseId.toString()) {
+    return next(new AppError("القسم غير مرتبط بهذه الدورة", 400));
+  }
+
+  if (video.sectionId.toString() !== sectionId.toString()) {
+    return next(new AppError("الدرس غير مرتبط بهذا القسم", 400));
+  }
+
+  if (!video.files.some((f) => f.toString() === file.id.toString())) {
+    return next(new AppError("الملف غير مرتبط بهذا الدرس", 400));
+  }
+
+  const publicId = file.publicId || getCloudinaryPublicIdFromUrl(file.url);
+  if (!publicId) {
+    return next(new AppError("تعذر توليد رابط آمن لهذا الملف", 500));
+  }
+
+  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 5;
+  const extension = getFileExtension(file.filename);
+  const deliveryType = file.deliveryType || "authenticated";
+
+  let signedUrl;
+  try {
+    signedUrl = cloudinary.utils.private_download_url(publicId, extension, {
+      resource_type: "raw",
+      type: deliveryType,
+      expires_at: expiresAt,
+      attachment: true,
+      filename_override: file.filename,
+    });
+  } catch (error) {
+    signedUrl = cloudinary.url(publicId, {
+      resource_type: "raw",
+      type: deliveryType,
+      secure: true,
+      sign_url: true,
+    });
+  }
+
+  res.status(200).json({
+    message: "تم توليد رابط تحميل آمن",
+    url: signedUrl,
+    expiresAt,
+  });
 });
 
 exports.addFile = catchAsync(async (req, res, next) => {
@@ -842,6 +915,14 @@ exports.deleteFile = catchAsync(async (req, res, next) => {
     return next(new AppError("الملف غير مرتبط بالدورة", 400));
   }
 
+  const publicId = file.publicId || getCloudinaryPublicIdFromUrl(file.url);
+  if (publicId) {
+    await cloudinary.uploader.destroy(publicId, {
+      resource_type: "raw",
+      type: file.deliveryType || "upload",
+    });
+  }
+
   // حذف الملف
   await file.deleteOne();
 
@@ -849,12 +930,11 @@ exports.deleteFile = catchAsync(async (req, res, next) => {
     (f) => f._id.toString() !== file._id.toString(),
   );
 
-  await video.save();
-
-  // استجابة النجاح
-  res.status(200).json({
-    message: "تم حذف الملف بنجاح",
-  });
+  select: ("filename size format",
+    // استجابة النجاح
+    res.status(200).json({
+      message: "تم حذف الملف بنجاح",
+    }));
 }); // file is not deleted from cloudinary
 
 // mark is completed  and update progress

@@ -5,6 +5,8 @@ const fileSchema = new Schema({
   filename: { type: String, required: true },
   size: { type: Number, required: true },
   url: { type: String, required: true },
+  publicId: { type: String },
+  deliveryType: { type: String, default: "upload" },
   format: String,
   uploadedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   // courseId: { type: Schema.Types.ObjectId, ref: "Course", required: true },
