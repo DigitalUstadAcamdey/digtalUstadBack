@@ -29,6 +29,31 @@ const getCourseTelegramChatId = (course) => {
   return telegram_vip_chat_id || null;
 };
 
+const shouldRedirectToInvite = (req) => {
+  return req.query?.redirect === "true" || req.query?.redirect === "1";
+};
+
+const sendInviteResponse = ({
+  req,
+  res,
+  statusCode,
+  message,
+  inviteLink,
+  expiresAt,
+  courseId,
+}) => {
+  if (shouldRedirectToInvite(req)) {
+    return res.redirect(303, inviteLink);
+  }
+
+  return res.status(statusCode).json({
+    message,
+    inviteLink,
+    expiresAt,
+    courseId,
+  });
+};
+
 exports.createVipInviteLink = catchAsync(async (req, res, next) => {
   if (!telegram_bot_token) {
     return next(new AppError("Telegram bot token is not configured", 500));
@@ -92,7 +117,15 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
   }).sort({ createdAt: -1 });
 
   if (activeInvite) {
-    return res.redirect(303, activeInvite.inviteLink);
+    return sendInviteResponse({
+      req,
+      res,
+      statusCode: 200,
+      message: "تم العثور على رابط VIP صالح",
+      inviteLink: activeInvite.inviteLink,
+      expiresAt: activeInvite.inviteLinkExpiresAt,
+      courseId,
+    });
   }
 
   const { expiresAt, expireDateUnix } = buildExpiryDate();
@@ -136,5 +169,13 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
     state: "link_issued",
   });
 
-  return res.redirect(303, inviteLink);
+  return sendInviteResponse({
+    req,
+    res,
+    statusCode: 201,
+    message: "تم إنشاء رابط VIP بنجاح",
+    inviteLink,
+    expiresAt,
+    courseId,
+  });
 });
