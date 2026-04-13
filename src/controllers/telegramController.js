@@ -12,7 +12,7 @@ const {
 
 const buildExpiryDate = () => {
   const expiresAt = new Date(
-    Date.now() + telegram_vip_link_expiry_minutes * 60 * 1000
+    Date.now() + telegram_vip_link_expiry_minutes * 60 * 1000,
   );
 
   return {
@@ -51,19 +51,21 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
   }
 
   const isEnrolled = user.enrolledCourses.some(
-    (enrolledCourseId) => enrolledCourseId.toString() === courseId.toString()
+    (enrolledCourseId) => enrolledCourseId.toString() === courseId.toString(),
   );
 
   if (!isEnrolled) {
     return next(
-      new AppError("يجب التسجيل في الدورة أولا للحصول على رابط VIP", 403)
+      new AppError("يجب التسجيل في الدورة أولا للحصول على رابط VIP", 403),
     );
   }
 
   const telegramChatId = getCourseTelegramChatId(course);
 
   if (!telegramChatId) {
-    return next(new AppError("Telegram VIP is not configured for this course", 400));
+    return next(
+      new AppError("Telegram VIP is not configured for this course", 400),
+    );
   }
 
   const now = new Date();
@@ -79,7 +81,7 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
       $set: {
         state: "expired",
       },
-    }
+    },
   );
 
   const activeInvite = await TelegramVipAccess.findOne({
@@ -90,12 +92,7 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
   }).sort({ createdAt: -1 });
 
   if (activeInvite) {
-    return res.status(200).json({
-      message: "تم العثور على رابط VIP صالح",
-      inviteLink: activeInvite.inviteLink,
-      expiresAt: activeInvite.inviteLinkExpiresAt,
-      courseId,
-    });
+    return res.redirect(303, activeInvite.inviteLink);
   }
 
   const { expiresAt, expireDateUnix } = buildExpiryDate();
@@ -111,7 +108,7 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
         expire_date: expireDateUnix,
         creates_join_request: false,
         name: `course-${courseId}-user-${userId}`,
-      }
+      },
     );
   } catch (error) {
     const telegramErrorMessage =
@@ -120,7 +117,10 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
     return next(new AppError(telegramErrorMessage, 502));
   }
 
-  if (!telegramResponse.data?.ok || !telegramResponse.data?.result?.invite_link) {
+  if (
+    !telegramResponse.data?.ok ||
+    !telegramResponse.data?.result?.invite_link
+  ) {
     return next(new AppError("فشل في إنشاء رابط VIP", 502));
   }
 
@@ -136,10 +136,5 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
     state: "link_issued",
   });
 
-  res.status(201).json({
-    message: "تم إنشاء رابط VIP بنجاح",
-    inviteLink,
-    expiresAt,
-    courseId,
-  });
+  return res.redirect(303, inviteLink);
 });
