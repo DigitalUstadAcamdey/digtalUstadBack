@@ -30,6 +30,9 @@ const todoRoutes = require("./routes/todo.route");
 
 const app = express();
 
+const normalizeOrigin = (origin = "") =>
+  origin.replace(/\/$/, "").toLowerCase();
+
 const allowedOrigins = [
   "http://localhost:3000",
   "https://e-learning-platform-eosin.vercel.app",
@@ -39,9 +42,24 @@ const allowedOrigins = [
   "https://1686134b9a15.ngrok-free.app",
 ];
 
+const allowedOriginsSet = new Set(allowedOrigins.map(normalizeOrigin));
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+
+  const normalized = normalizeOrigin(origin);
+
+  if (allowedOriginsSet.has(normalized)) return true;
+
+  // Allow all HTTPS subdomains of digitalustadacademy.com in production.
+  return /^https:\/\/([a-z0-9-]+\.)?digitalustadacademy\.com$/i.test(
+    normalized,
+  );
+};
+
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isAllowedOrigin(origin)) {
       return callback(null, true);
     }
 
@@ -50,6 +68,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept", "Origin"],
   exposedHeaders: ["Set-Cookie"],
   preflightContinue: false,
   optionsSuccessStatus: 200,
