@@ -74,6 +74,9 @@ const corsOptions = {
   optionsSuccessStatus: 200,
 };
 
+const corsAllowedHeaders =
+  "Content-Type, Authorization, Accept, Origin, X-Requested-With";
+
 // for reading req.body
 app.post("/api/chargily/webhook", express.raw({ type: "*/*" }), addWebhook);
 
@@ -92,6 +95,30 @@ app.use(
 );
 
 // cors
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (isAllowedOrigin(origin)) {
+    if (origin) {
+      res.header("Access-Control-Allow-Origin", origin);
+      res.header("Vary", "Origin");
+    }
+
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PUT,DELETE,PATCH,OPTIONS",
+    );
+    res.header("Access-Control-Allow-Headers", corsAllowedHeaders);
+  }
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
@@ -152,9 +179,6 @@ app.use((req, res, next) => {
   next();
 });
 
-//set static folder
-app.use("*", express.static("public"));
-
 //defined routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", usersRoutes);
@@ -169,6 +193,9 @@ app.use("/api/notification", notificationRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/chargily", chargilyRoutes);
 app.use("/api/todos", todoRoutes);
+
+//set static folder
+app.use(express.static("public"));
 
 //defined 404 middleware (page not found)
 app.all("*", (req, res, next) => {
