@@ -3,6 +3,7 @@ services:
     ports:
       - "5000:5000"
     container_name: digital_ustad_academy_api
+    restart: unless-stopped
     build:
       context: .
       target: production
@@ -61,28 +62,28 @@ services:
       - traefik-network
   mongo:
     image: mongo
-    restart: always
+    restart: unless-stopped
     networks:
       - traefik-network
     command: ["mongod", "--bind_ip_all"]
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - /root/mongo-data-bind-backup:/data/db
 
   mongo-express:
     image: mongo-express
-    restart: always
+    restart: unless-stopped
     networks:
       - traefik-network
     ports:
       - 8082:8081
     environment:
-      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
-      ME_CONFIG_BASICAUTH_ENABLED: true
-      ME_CONFIG_BASICAUTH_USERNAME: mongoexpressuser
-      ME_CONFIG_BASICAUTH_PASSWORD: mongoexpresspass
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/
+      ME_CONFIG_BASICAUTH_ENABLED: ${ME_CONFIG_BASICAUTH_ENABLED}
+      ME_CONFIG_BASICAUTH_USERNAME: ${ME_CONFIG_BASICAUTH_USERNAME}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${ME_CONFIG_BASICAUTH_PASSWORD}
 
 networks:
   traefik-network:
