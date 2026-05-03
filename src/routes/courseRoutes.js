@@ -32,6 +32,7 @@ const {
   updateVideoTitleAndDescription,
   getCourseOverview,
   enrollCourseWithSubscription,
+  reorderSectionVideos,
 } = require("../controllers/courseController");
 const { prmission, restrictTo } = require("../controllers/authController");
 const {
@@ -101,6 +102,13 @@ router
   .delete(prmission, restrictTo("teacher"), deleteSection);
 
 // Section videos (Lessons)
+
+router.patch(
+  "/:courseId/sections/:sectionId/videos/reorder",
+  prmission,
+  restrictTo("admin", "teacher"),
+  reorderSectionVideos,
+);
 
 router.post(
   "/:courseId/sections/:sectionId",

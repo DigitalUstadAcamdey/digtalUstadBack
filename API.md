@@ -67,6 +67,7 @@ This document outlines the API routes available in the Digital Ustad application
 | `PUT`    | `/:courseId/sections/:sectionId`                               | Update section                         | Teacher                       |
 | `DELETE` | `/:courseId/sections/:sectionId`                               | Delete section                         | Teacher                       |
 | `POST`   | `/:courseId/sections/:sectionId`                               | Add video/lesson to section            | Teacher                       |
+| `PATCH`  | `/:courseId/sections/:sectionId/videos/reorder`                 | Reorder section videos                 | Admin, Teacher                |
 | `PATCH`  | `/:courseId/sections/:sectionId/videos/:videoId`               | Update video title/desc                | Teacher                       |
 | `DELETE` | `/:courseId/sections/:sectionId/videos/:videoId`               | Delete video from section              | Teacher                       |
 | `POST`   | `/enrolled/:courseId`                                          | Enroll in course                       | Student                       |
@@ -80,6 +81,24 @@ This document outlines the API routes available in the Digital Ustad application
 | `DELETE` | `/:courseId/sections/:sectionId/videos/:videoId/files/:fileId` | Delete file from lesson                | Teacher                       |
 | `POST`   | `/:courseId/lessons/:videoId`                                  | Add comment to lesson                  | Student                       |
 | `GET`    | `/:videoId/comments`                                           | Get comments for lesson                | Authenticated                 |
+
+### Reorder Section Videos
+
+`PATCH /api/courses/:courseId/sections/:sectionId/videos/reorder`
+
+Send the full list of video IDs in the new order:
+
+```json
+{
+  "videoIds": [
+    "66f000000000000000000001",
+    "66f000000000000000000003",
+    "66f000000000000000000002"
+  ]
+}
+```
+
+The backend only changes `section.videos` order. It does not delete, reupload, or modify video files. The list must contain every current video in that section exactly once.
 
 ---
 

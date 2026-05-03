@@ -113,6 +113,9 @@ const trackCourseWithSubscription = async ({ user, course, subscription }) => {
   };
 };
 
+const canManageCourseContent = (user, course) =>
+  user.role === "admin" || course.instructor.toString() === user.id.toString();
+
 const multerStorage = multer.memoryStorage();
 
 const multerFilter = (req, file, cb) => {
@@ -321,6 +324,76 @@ exports.addVideoToSection = catchAsync(async (req, res, next) => {
     video: newVideo,
   });
 });
+
+exports.reorderSectionVideos = catchAsync(async (req, res, next) => {
+  const { courseId, sectionId } = req.params;
+  const { videoIds } = req.body;
+
+  if (!Array.isArray(videoIds)) {
+    return next(new AppError("يرجى إرسال videoIds كمصفوفة", 400));
+  }
+
+  if (videoIds.some((videoId) => !videoId)) {
+    return next(new AppError("كل videoId مطلوب", 400));
+  }
+
+  const [course, section] = await Promise.all([
+    Course.findById(courseId).select("instructor sections"),
+    Section.findById(sectionId),
+  ]);
+
+  if (!course) return next(new AppError("المادة غير موجودة", 404));
+  if (!section) return next(new AppError("القسم غير موجود", 404));
+
+  if (!canManageCourseContent(req.user, course)) {
+    return next(
+      new AppError("ليس لديك الصلاحية لترتيب فيديوهات هذا القسم", 403),
+    );
+  }
+
+  if (
+    section.courseId.toString() !== courseId.toString() ||
+    !hasObjectId(course.sections, sectionId)
+  ) {
+    return next(new AppError("القسم غير مرتبط بهذه الدورة", 400));
+  }
+
+  const requestedVideoIds = videoIds.map((videoId) => videoId.toString());
+  const uniqueVideoIds = new Set(requestedVideoIds);
+  const currentVideoIds = section.videos.map((videoId) => videoId.toString());
+  const currentVideoIdsSet = new Set(currentVideoIds);
+
+  if (uniqueVideoIds.size !== requestedVideoIds.length) {
+    return next(new AppError("لا يمكن تكرار نفس الفيديو في الترتيب", 400));
+  }
+
+  if (requestedVideoIds.length !== currentVideoIds.length) {
+    return next(new AppError("يجب إرسال جميع فيديوهات القسم بنفس العدد", 400));
+  }
+
+  const hasUnknownVideo = requestedVideoIds.some(
+    (videoId) => !currentVideoIdsSet.has(videoId),
+  );
+
+  if (hasUnknownVideo) {
+    return next(new AppError("يوجد فيديو غير مرتبط بهذا القسم", 400));
+  }
+
+  section.videos = requestedVideoIds;
+  await section.save();
+
+  await section.populate({
+    path: "videos",
+    select: "lessonTitle duration description url isCompleted completedBy files",
+  });
+
+  res.status(200).json({
+    status: "success",
+    message: "تم ترتيب الفيديوهات بنجاح",
+    section,
+  });
+});
+
 // add update the description
 exports.updateVideoTitleAndDescription = catchAsync(async (req, res, next) => {
   const teacher = await User.findById(req.user.id);
