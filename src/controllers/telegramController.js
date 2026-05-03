@@ -5,6 +5,10 @@ const TelegramVipAccess = require("../models/telegramVipAccessModel");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const {
+  findActiveAnnualSubscription,
+  hasObjectId,
+} = require("../utils/subscriptionAccess");
+const {
   telegram_bot_token,
   telegram_vip_chat_id,
   telegram_vip_link_expiry_minutes,
@@ -37,9 +41,10 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
   const { courseId } = req.params;
   const userId = req.user.id;
 
-  const [user, course] = await Promise.all([
+  const [user, course, activeAnnualSubscription] = await Promise.all([
     User.findById(userId).select("enrolledCourses"),
     Course.findById(courseId).select("title telegramChatId telegramVipEnabled"),
+    findActiveAnnualSubscription(userId).select("_id").lean(),
   ]);
 
   if (!user) {
@@ -50,13 +55,14 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
     return next(new AppError("المادة غير موجودة", 404));
   }
 
-  const isEnrolled = user.enrolledCourses.some(
-    (enrolledCourseId) => enrolledCourseId.toString() === courseId.toString(),
-  );
+  const isEnrolled = hasObjectId(user.enrolledCourses, courseId);
 
-  if (!isEnrolled) {
+  if (!isEnrolled && !activeAnnualSubscription) {
     return next(
-      new AppError("يجب التسجيل في الدورة أولا للحصول على رابط VIP", 403),
+      new AppError(
+        "يجب التسجيل في الدورة أو امتلاك اشتراك سنوي نشط للحصول على رابط VIP",
+        403,
+      ),
     );
   }
 

@@ -138,7 +138,7 @@ router.delete(
 // update isComplete video
 router
   .route("/:courseId/videos/:videoId/completed")
-  .patch(prmission, restrictTo("student"), isCompleted);
+  .patch(prmission, restrictTo("student"), checkCourseAccess, isCompleted);
 
 // Section Reviews
 router
@@ -176,7 +176,7 @@ router.get(
 
 router
   .route("/:courseId/lessons/:videoId")
-  .post(prmission, restrictTo("student"), addComment);
+  .post(prmission, restrictTo("student"), checkCourseAccess, addComment);
 
 router.get("/:videoId/comments", prmission, getCommentsInLesson);
 

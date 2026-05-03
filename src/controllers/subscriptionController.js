@@ -5,6 +5,10 @@ const Transaction = require("../models/transactionModel");
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
 const { subscriptionPrice } = require("../config/config");
+const {
+  buildAnnualSubscriptionAccess,
+  findActiveAnnualSubscription,
+} = require("../utils/subscriptionAccess");
 /**
  * CREATE subscription (1 year)
  * user buys annual subscription
@@ -16,11 +20,7 @@ exports.createSubscription = catchAsync(async (req, res, next) => {
   // check if user exists
   if (!user) return next(new AppError("المستخدم غير موجود", 404));
 
-  const existingSub = await Subscription.findOne({
-    user: userId,
-    status: "active",
-    endDate: { $gt: new Date() },
-  });
+  const existingSub = await findActiveAnnualSubscription(userId);
   // check if already has active subscription
   if (existingSub) {
     return next(new AppError("لديك اشتراك نشط بالفعل", 400));
@@ -92,6 +92,7 @@ exports.createSubscription = catchAsync(async (req, res, next) => {
   res.status(201).json({
     message: "تم إنشاء الاشتراك السنوي بنجاح",
     subscription,
+    access: buildAnnualSubscriptionAccess(subscription),
   });
 });
 /**
@@ -138,7 +139,7 @@ exports.renewSubscription = catchAsync(async (req, res, next) => {
     userId,
     {
       $inc: { balance: -subscriptionPrice },
-      $addToSet: { enrolledCourses: existingSub.courses },
+      $addToSet: { enrolledCourses: { $each: existingSub.courses } },
     },
     {
       new: true,
@@ -161,6 +162,7 @@ exports.renewSubscription = catchAsync(async (req, res, next) => {
   res.status(201).json({
     message: "تم تجديد الاشتراك السنوي بنجاح",
     subscription,
+    access: buildAnnualSubscriptionAccess(subscription),
   });
 });
 /**
@@ -180,6 +182,7 @@ exports.getMySubscription = catchAsync(async (req, res, next) => {
   res.status(200).json({
     message: "تم جلب بيانات الاشتراك بنجاح",
     subscription,
+    access: buildAnnualSubscriptionAccess(subscription),
   });
 });
 
@@ -201,7 +204,12 @@ exports.cancelSubscription = catchAsync(async (req, res, next) => {
   subscription.status = "cancelled";
   await subscription.save();
 
+  await User.findByIdAndUpdate(userId, {
+    $pull: { enrolledCourses: { $in: subscription.courses } },
+  });
+
   res.status(200).json({
     message: "تم إلغاء الاشتراك بنجاح",
+    access: buildAnnualSubscriptionAccess(subscription),
   });
 });

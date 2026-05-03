@@ -58,7 +58,7 @@ This document outlines the API routes available in the Digital Ustad application
 | `GET`    | `/`                                                            | Get all courses                        | Public                        |
 | `GET`    | `/searchCourses`                                               | Search courses                         | Public                        |
 | `GET`    | `/searchCoursesByTeacher`                                      | Search courses by teacher              | Teacher                       |
-| `GET`    | `/my-courses`                                                  | Get my enrolled courses                | Student                       |
+| `GET`    | `/my-courses`                                                  | Get my accessible courses              | Student                       |
 | `GET`    | `/course-overview/:courseId`                                   | Get course overview (for non-enrolled) | Public                        |
 | `GET`    | `/:courseId`                                                   | Get course details                     | Authenticated, Access Checked |
 | `POST`   | `/:courseId`                                                   | Update course sections (Structure)     | Teacher                       |
@@ -70,7 +70,7 @@ This document outlines the API routes available in the Digital Ustad application
 | `PATCH`  | `/:courseId/sections/:sectionId/videos/:videoId`               | Update video title/desc                | Teacher                       |
 | `DELETE` | `/:courseId/sections/:sectionId/videos/:videoId`               | Delete video from section              | Teacher                       |
 | `POST`   | `/enrolled/:courseId`                                          | Enroll in course                       | Student                       |
-| `POST`   | `/enrolled-with-subscription/:courseId`                        | Enroll with subscription               | Student                       |
+| `POST`   | `/enrolled-with-subscription/:courseId`                        | Track/start course with subscription   | Student                       |
 | `DELETE` | `/unenrolled/:courseId`                                        | Unenroll from course                   | Student                       |
 | `PATCH`  | `/:courseId/videos/:videoId/completed`                         | Mark video as completed                | Student                       |
 | `POST`   | `/reviews/:courseId`                                           | Add review to course                   | Student                       |
@@ -93,6 +93,29 @@ This document outlines the API routes available in the Digital Ustad application
 | `POST`   | `/renew/:subscriptionId` | Renew subscription      | Student         |
 | `GET`    | `/me`                    | Get my subscription     | Student         |
 | `DELETE` | `/cancel`                | Cancel subscription     | Student         |
+
+### Annual Subscription Frontend Contract
+
+- The current subscription plan is annual.
+- A subscription is active when `status === "active"` and `endDate` is in the future.
+- Active annual subscriptions grant access to all courses. The frontend does not need to call `/api/courses/enrolled-with-subscription/:courseId` before opening course content.
+- Protected course content can be opened with `GET /api/courses/:courseId`; the backend accepts either direct enrollment/purchase or an active annual subscription.
+- `GET /api/subscriptions/me`, `POST /api/subscriptions`, and `POST /api/subscriptions/renew/:subscriptionId` return an `access` object:
+
+```json
+{
+  "plan": "annual",
+  "isActive": true,
+  "accessScope": "all_courses",
+  "requiresCourseEnrollment": false,
+  "startedAt": "2026-05-03T00:00:00.000Z",
+  "expiresAt": "2027-05-03T00:00:00.000Z"
+}
+```
+
+- `GET /api/courses/my-courses` returns all courses when `access.accessScope === "all_courses"`; otherwise it returns the user's enrolled/purchased courses.
+- `POST /api/courses/enrolled-with-subscription/:courseId` is optional for annual users. Use it only when the frontend wants to track that the student started a course or add the course to the user's enrolled list/stats.
+- `DELETE /api/subscriptions/cancel` cancels annual access and removes courses that were tracked through the subscription from `enrolledCourses`.
 
 ---
 

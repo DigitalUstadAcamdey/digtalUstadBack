@@ -22,6 +22,11 @@ const Section = require("../models/sectionsModel");
 const Coupon = require("../models/couponModel");
 const Subscription = require("../models/subscriptionModel");
 const Transaction = require("../models/transactionModel");
+const {
+  buildAnnualSubscriptionAccess,
+  findActiveAnnualSubscription,
+  hasObjectId,
+} = require("../utils/subscriptionAccess");
 
 const getCloudinaryPublicIdFromUrl = (url) => {
   if (!url || typeof url !== "string") return null;
@@ -71,6 +76,41 @@ const generateSignedFileUrl = (file, expiresAt) => {
 
     return { url, expiresAt: signedExpiry };
   }
+};
+
+const myCoursesPopulate = {
+  path: "sections",
+  select: "title videos",
+};
+
+const trackCourseWithSubscription = async ({ user, course, subscription }) => {
+  const alreadyEnrolled = hasObjectId(user.enrolledCourses, course._id);
+  const alreadyTrackedBySubscription = hasObjectId(
+    subscription.courses,
+    course._id,
+  );
+  const courseHasStudent = hasObjectId(course.enrolledStudents, user._id);
+
+  if (!alreadyEnrolled) {
+    user.enrolledCourses.addToSet(course._id);
+    await user.save({ validateBeforeSave: false });
+
+    if (!alreadyTrackedBySubscription) {
+      subscription.courses.addToSet(course._id);
+      await subscription.save();
+    }
+  }
+
+  if (!courseHasStudent) {
+    course.enrolledStudents.addToSet(user._id);
+    course.studentsCount = course.enrolledStudents.length;
+    await course.save();
+  }
+
+  return {
+    alreadyEnrolled,
+    trackedBySubscription: !alreadyEnrolled || alreadyTrackedBySubscription,
+  };
 };
 
 const multerStorage = multer.memoryStorage();
@@ -598,15 +638,27 @@ exports.deleteCourse = catchAsync(async (req, res, next) => {
   });
 });
 exports.getMyCourses = catchAsync(async (req, res, next) => {
+  const activeAnnualSubscription = await findActiveAnnualSubscription(
+    req.user.id,
+  ).lean();
+
+  if (activeAnnualSubscription) {
+    const courses = await Course.find().populate(myCoursesPopulate);
+
+    return res.status(200).json({
+      message: "تم الحصول على دورراتك بنجاح",
+      access: buildAnnualSubscriptionAccess(activeAnnualSubscription),
+      course: courses,
+    });
+  }
+
   const user = await User.findById(req.user.id).populate({
     path: "enrolledCourses",
-    populate: {
-      path: "sections",
-      select: "title videos",
-    },
+    populate: myCoursesPopulate,
   });
   res.status(200).json({
     message: "تم الحصول على دورراتك بنجاح",
+    access: buildAnnualSubscriptionAccess(activeAnnualSubscription),
     course: user.enrolledCourses,
   });
 });
@@ -623,8 +675,24 @@ exports.enrollCourse = catchAsync(async (req, res, next) => {
   const course = await Course.findById(courseId);
   if (!course) return next(new AppError("المادة غير موجودة", 404));
 
-  if (student.enrolledCourses.includes(courseId)) {
+  if (hasObjectId(student.enrolledCourses, courseId)) {
     return next(new AppError("أنت مسجل بالفعل في هذا الكورس", 400));
+  }
+
+  const activeAnnualSubscription =
+    await findActiveAnnualSubscription(studentId);
+
+  if (activeAnnualSubscription) {
+    await trackCourseWithSubscription({
+      user: student,
+      course,
+      subscription: activeAnnualSubscription,
+    });
+
+    return res.status(200).json({
+      message: "تم التسجيل في الكورس عبر الاشتراك السنوي",
+      access: buildAnnualSubscriptionAccess(activeAnnualSubscription),
+    });
   }
 
   let finalPrice = course.price;
@@ -651,8 +719,8 @@ exports.enrollCourse = catchAsync(async (req, res, next) => {
     return next(new AppError("ليس لديك رصيد كاف للتسجيل في هذا الكورس", 400));
   }
 
-  course.enrolledStudents.push(studentId);
-  course.studentsCount += 1;
+  course.enrolledStudents.addToSet(studentId);
+  course.studentsCount = course.enrolledStudents.length;
 
   await course.save();
 
@@ -660,7 +728,7 @@ exports.enrollCourse = catchAsync(async (req, res, next) => {
   await User.findByIdAndUpdate(
     studentId,
     {
-      $push: { enrolledCourses: courseId },
+      $addToSet: { enrolledCourses: courseId },
       $inc: { balance: -finalPrice },
     },
     {
@@ -698,38 +766,23 @@ exports.enrollCourseWithSubscription = catchAsync(async (req, res, next) => {
   if (!course) return next(new AppError("الكورس غير موجود", 404));
 
   // check for active subscription
-  const subscription = await Subscription.findOne({
-    user: userId,
-    status: "active",
-    endDate: { $gt: new Date() },
-  });
+  const subscription = await findActiveAnnualSubscription(userId);
 
   if (!subscription) {
     return next(new AppError("لا تملك اشتراكًا نشطًا", 403));
   }
 
-  // check if already enrolled
-  if (user.enrolledCourses.includes(courseId)) {
-    return next(new AppError("أنت مسجل بالفعل في هذا الكورس", 400));
-  }
-
-  // add course to user's enrolledCourses
-  user.enrolledCourses.push(courseId);
-  await user.save({
-    validateBeforeSave: false,
+  const tracking = await trackCourseWithSubscription({
+    user,
+    course,
+    subscription,
   });
 
-  // add course to subscription.courses
-  subscription.courses.push(courseId);
-  await subscription.save();
-
-  // update course stats
-  course.enrolledStudents.push(userId);
-  course.studentsCount += 1;
-  await course.save();
-
   res.status(200).json({
-    message: "تم التسجيل في الكورس عبر الاشتراك السنوي",
+    message: tracking.alreadyEnrolled
+      ? "أنت مسجل بالفعل في هذا الكورس"
+      : "تم التسجيل في الكورس عبر الاشتراك السنوي",
+    access: buildAnnualSubscriptionAccess(subscription),
   });
 });
 

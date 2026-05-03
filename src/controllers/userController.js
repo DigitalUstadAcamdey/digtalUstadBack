@@ -1,4 +1,5 @@
 const User = require("../models/userModel");
+const Course = require("../models/courseModel");
 const catchAsync = require("./../utils/catchAsync");
 const AppError = require("./../utils/appError");
 const APIFeaturs = require("./../utils/apiFeaturs");
@@ -6,6 +7,10 @@ const multer = require("multer");
 const cloudinary = require("./../config/cloudinary");
 const sharp = require("sharp");
 const Transaction = require("../models/transactionModel");
+const {
+  buildAnnualSubscriptionAccess,
+  findActiveAnnualSubscription,
+} = require("../utils/subscriptionAccess");
 
 // upload files
 const multerStorage = multer.memoryStorage();
@@ -110,33 +115,54 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
 });
 
 exports.getMe = catchAsync(async (req, res, next) => {
-  const user = await User.findById(req.user.id)
-    .select("-password")
-    .populate([
-      {
-        path: "enrolledCourses", //for student
-      },
-      {
-        path: "publishedCourses", //for teacher
-      },
-    ]);
+  const [user, activeAnnualSubscription] = await Promise.all([
+    User.findById(req.user.id)
+      .select("-password")
+      .populate([
+        {
+          path: "enrolledCourses", //for student
+        },
+        {
+          path: "publishedCourses", //for teacher
+        },
+      ]),
+    findActiveAnnualSubscription(req.user.id).lean(),
+  ]);
   if (!user) {
     return next(new AppError("المستخدم غير موجود", 404));
   }
   res.status(200).json({
     message: "نجاح ",
     user,
+    subscriptionAccess: buildAnnualSubscriptionAccess(
+      activeAnnualSubscription,
+    ),
   });
 });
 
 // show all course enrolled
 exports.getEnrolledCourses = catchAsync(async (req, res, next) => {
+  const activeAnnualSubscription = await findActiveAnnualSubscription(
+    req.user.id,
+  ).lean();
+
+  if (activeAnnualSubscription) {
+    const courses = await Course.find();
+
+    return res.status(200).json({
+      message: "نجاح ",
+      access: buildAnnualSubscriptionAccess(activeAnnualSubscription),
+      enrolledCourses: courses,
+    });
+  }
+
   const user = await User.findById(req.user.id).populate("enrolledCourses");
   if (!user) {
     return next(new AppError("المستخدم غير موجود", 404));
   }
   res.status(200).json({
     message: "نجاح ",
+    access: buildAnnualSubscriptionAccess(activeAnnualSubscription),
     enrolledCourses: user.enrolledCourses,
   });
 });
