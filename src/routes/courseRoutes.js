@@ -33,6 +33,7 @@ const {
   getCourseOverview,
   enrollCourseWithSubscription,
   reorderSectionVideos,
+  moveVideoToSection,
 } = require("../controllers/courseController");
 const { prmission, restrictTo } = require("../controllers/authController");
 const {
@@ -108,6 +109,13 @@ router.patch(
   prmission,
   restrictTo("admin", "teacher"),
   reorderSectionVideos,
+);
+
+router.patch(
+  "/:courseId/sections/:sectionId/videos/:videoId/move",
+  prmission,
+  restrictTo("admin", "teacher"),
+  moveVideoToSection,
 );
 
 router.post(

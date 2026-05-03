@@ -394,6 +394,100 @@ exports.reorderSectionVideos = catchAsync(async (req, res, next) => {
   });
 });
 
+exports.moveVideoToSection = catchAsync(async (req, res, next) => {
+  const { courseId, sectionId, videoId } = req.params;
+  const { toSectionId, position } = req.body;
+
+  if (!toSectionId) {
+    return next(new AppError("يرجى إرسال معرف القسم الهدف toSectionId", 400));
+  }
+
+  const [course, fromSection, toSection, video] = await Promise.all([
+    Course.findById(courseId).select("instructor sections"),
+    Section.findById(sectionId),
+    Section.findById(toSectionId),
+    Video.findById(videoId),
+  ]);
+
+  if (!course) return next(new AppError("المادة غير موجودة", 404));
+  if (!fromSection) return next(new AppError("القسم الحالي غير موجود", 404));
+  if (!toSection) return next(new AppError("القسم الهدف غير موجود", 404));
+  if (!video) return next(new AppError("الفيديو غير موجود", 404));
+
+  if (!canManageCourseContent(req.user, course)) {
+    return next(new AppError("ليس لديك الصلاحية لنقل هذا الفيديو", 403));
+  }
+
+  const sectionsBelongToCourse =
+    fromSection.courseId.toString() === courseId.toString() &&
+    toSection.courseId.toString() === courseId.toString() &&
+    hasObjectId(course.sections, fromSection._id) &&
+    hasObjectId(course.sections, toSection._id);
+
+  if (!sectionsBelongToCourse) {
+    return next(new AppError("الأقسام غير مرتبطة بهذه الدورة", 400));
+  }
+
+  const videoBelongsToSource =
+    video.sectionId.toString() === sectionId.toString() &&
+    hasObjectId(fromSection.videos, video._id);
+
+  if (!videoBelongsToSource) {
+    return next(new AppError("الفيديو غير مرتبط بالقسم الحالي", 400));
+  }
+
+  const sameSection = sectionId.toString() === toSectionId.toString();
+  const targetVideos = sameSection
+    ? fromSection.videos.filter((id) => id.toString() !== videoId.toString())
+    : toSection.videos.filter((id) => id.toString() !== videoId.toString());
+
+  const insertPosition =
+    position === undefined || position === null
+      ? targetVideos.length
+      : Number(position);
+
+  if (
+    !Number.isInteger(insertPosition) ||
+    insertPosition < 0 ||
+    insertPosition > targetVideos.length
+  ) {
+    return next(new AppError("قيمة position غير صالحة", 400));
+  }
+
+  targetVideos.splice(insertPosition, 0, video._id);
+
+  if (sameSection) {
+    fromSection.videos = targetVideos;
+    await fromSection.save();
+  } else {
+    fromSection.videos = fromSection.videos.filter(
+      (id) => id.toString() !== videoId.toString(),
+    );
+    toSection.videos = targetVideos;
+    video.sectionId = toSection._id;
+
+    await Promise.all([fromSection.save(), toSection.save(), video.save()]);
+  }
+
+  const [updatedFromSection, updatedToSection] = await Promise.all([
+    Section.findById(sectionId).populate({
+      path: "videos",
+      select: "lessonTitle duration description url isCompleted completedBy files",
+    }),
+    Section.findById(toSectionId).populate({
+      path: "videos",
+      select: "lessonTitle duration description url isCompleted completedBy files",
+    }),
+  ]);
+
+  res.status(200).json({
+    status: "success",
+    message: "تم نقل الفيديو بنجاح",
+    fromSection: updatedFromSection,
+    toSection: updatedToSection,
+  });
+});
+
 // add update the description
 exports.updateVideoTitleAndDescription = catchAsync(async (req, res, next) => {
   const teacher = await User.findById(req.user.id);
