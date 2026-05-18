@@ -4,11 +4,11 @@ const User = require("../models/userModel");
 const Transaction = require("../models/transactionModel");
 const AppError = require("../utils/appError");
 const catchAsync = require("../utils/catchAsync");
-const { subscriptionPrice } = require("../config/config");
 const {
   buildAnnualSubscriptionAccess,
   findActiveAnnualSubscription,
 } = require("../utils/subscriptionAccess");
+const { getAnnualSubscriptionPrice } = require("../utils/subscriptionPrice");
 /**
  * CREATE subscription (1 year)
  * user buys annual subscription
@@ -27,6 +27,7 @@ exports.createSubscription = catchAsync(async (req, res, next) => {
   }
 
   const { couponCode } = req.body;
+  const subscriptionPrice = await getAnnualSubscriptionPrice();
   let finalPrice = subscriptionPrice;
   // apply coupon
   if (couponCode) {
@@ -121,6 +122,7 @@ exports.renewSubscription = catchAsync(async (req, res, next) => {
   }
 
   // simple balance check
+  const subscriptionPrice = await getAnnualSubscriptionPrice();
   if (!(user.balance >= 0 && user.balance >= subscriptionPrice)) {
     return next(new AppError("ليس لديك رصيد كاف لعمل إشتراك سنوي ", 400));
   }
