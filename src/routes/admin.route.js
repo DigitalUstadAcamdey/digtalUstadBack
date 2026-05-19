@@ -11,7 +11,7 @@ const router = express.Router();
 router.route("/").get(prmission, restrictTo("admin"), getAnalytics);
 router
   .route("/subscription-price")
-  .get(prmission, restrictTo("admin"), getSubscriptionPrice)
+  .get(prmission, restrictTo("admin", "student"), getSubscriptionPrice)
   .put(prmission, restrictTo("admin"), updateSubscriptionPrice);
 
 module.exports = router;
