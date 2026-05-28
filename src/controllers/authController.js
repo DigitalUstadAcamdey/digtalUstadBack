@@ -546,6 +546,52 @@ exports.prmission = catchAsync(async (req, res, next) => {
   next();
 }); //for add permissions with jwt
 
+exports.optionalPrmission = catchAsync(async (req, res, next) => {
+  let token;
+
+  if (req.cookies?.token) {
+    token = req.cookies.token;
+  } else if (req.headers.authorization?.startsWith("Bearer")) {
+    token = req.headers.authorization.split(" ")[1];
+  }
+
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const decoded = await promisify(jwt.verify)(token, jwt_secret);
+    const user = await User.findById(decoded.id);
+
+    if (!user || decoded.exp < Date.now() / 1000) {
+      req.user = null;
+      return next();
+    }
+
+    if (decoded.sessionId) {
+      const activeSession = user.loggedInDevices?.find(
+        (session) => session.sessionId === decoded.sessionId
+      );
+
+      if (!activeSession) {
+        req.user = null;
+        return next();
+      }
+
+      activeSession.lastActiveAt = new Date();
+      await user.save({ validateBeforeSave: false });
+      req.sessionId = decoded.sessionId;
+    }
+
+    req.user = user;
+    return next();
+  } catch (error) {
+    req.user = null;
+    return next();
+  }
+});
+
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {
     // `roles` is an array of roles allowed to access the route, e.g., ['admin', 'lead-guide']

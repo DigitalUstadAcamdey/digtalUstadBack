@@ -15,6 +15,7 @@ module.exports = {
   client_url:process.env.CLIENT_URL,
   telegram_bot_token: process.env.TELEGRAM_BOT_TOKEN,
   telegram_vip_chat_id: process.env.TELEGRAM_VIP_CHAT_ID,
+  telegram_normal_link: process.env.TELEGRAM_NORMAL_LINK,
   telegram_vip_link_expiry_minutes: Number(
     process.env.TELEGRAM_VIP_LINK_EXPIRY_MINUTES || 15
   ),

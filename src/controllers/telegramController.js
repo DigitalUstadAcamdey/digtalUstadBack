@@ -11,6 +11,7 @@ const {
 const {
   telegram_bot_token,
   telegram_vip_chat_id,
+  telegram_normal_link,
   telegram_vip_link_expiry_minutes,
 } = require("../config/config");
 
@@ -33,37 +34,61 @@ const getCourseTelegramChatId = (course) => {
   return telegram_vip_chat_id || null;
 };
 
+const getCourseNormalTelegramLink = (course) =>
+  course.telegramNormalLink || telegram_normal_link || null;
+
 exports.createVipInviteLink = catchAsync(async (req, res, next) => {
-  if (!telegram_bot_token) {
-    return next(new AppError("Telegram bot token is not configured", 500));
-  }
-
   const { courseId } = req.params;
-  const userId = req.user.id;
+  const userId = req.user?.id || null;
 
-  const [user, course, activeAnnualSubscription] = await Promise.all([
-    User.findById(userId).select("enrolledCourses"),
-    Course.findById(courseId).select("title telegramChatId telegramVipEnabled"),
-    findActiveAnnualSubscription(userId).select("_id").lean(),
-  ]);
-
-  if (!user) {
-    return next(new AppError("المستخدم غير موجود", 404));
-  }
+  const course = await Course.findById(courseId).select(
+    "title telegramChatId telegramNormalLink telegramVipEnabled",
+  );
 
   if (!course) {
     return next(new AppError("المادة غير موجودة", 404));
   }
 
-  const isEnrolled = hasObjectId(user.enrolledCourses, courseId);
+  if (!userId) {
+    const normalLink = getCourseNormalTelegramLink(course);
 
-  if (!isEnrolled && !activeAnnualSubscription) {
-    return next(
-      new AppError(
-        "يجب التسجيل في الدورة أو امتلاك اشتراك سنوي نشط للحصول على رابط VIP",
-        403,
-      ),
-    );
+    if (!normalLink) {
+      return next(new AppError("Telegram normal channel is not configured", 400));
+    }
+
+    return res.redirect(303, normalLink);
+  }
+
+  const [user, activeAnnualSubscription] = await Promise.all([
+    User.findById(userId).select("enrolledCourses"),
+    findActiveAnnualSubscription(userId).select("_id").lean(),
+  ]);
+
+  if (!user) {
+    const normalLink = getCourseNormalTelegramLink(course);
+
+    if (!normalLink) {
+      return next(new AppError("Telegram normal channel is not configured", 400));
+    }
+
+    return res.redirect(303, normalLink);
+  }
+
+  const isEnrolled = hasObjectId(user.enrolledCourses, courseId);
+  const hasVipAccess = isEnrolled || Boolean(activeAnnualSubscription);
+
+  if (!hasVipAccess) {
+    const normalLink = getCourseNormalTelegramLink(course);
+
+    if (!normalLink) {
+      return next(new AppError("Telegram normal channel is not configured", 400));
+    }
+
+    return res.redirect(303, normalLink);
+  }
+
+  if (!telegram_bot_token) {
+    return next(new AppError("Telegram bot token is not configured", 500));
   }
 
   const telegramChatId = getCourseTelegramChatId(course);

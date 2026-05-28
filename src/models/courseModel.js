@@ -17,6 +17,10 @@ const courseSchema = new Schema({
     type: String,
     default: null,
   },
+  telegramNormalLink: {
+    type: String,
+    default: null,
+  },
   telegramVipEnabled: {
     type: Boolean,
     default: false,
