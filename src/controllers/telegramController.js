@@ -37,6 +37,32 @@ const getCourseTelegramChatId = (course) => {
 const getCourseNormalTelegramLink = (course) =>
   course.telegramNormalLink || telegram_normal_link || null;
 
+const shouldRespondWithJson = (req) => {
+  const secFetchMode = req.get("sec-fetch-mode");
+  const secFetchDest = req.get("sec-fetch-dest");
+  const acceptsJson = req.accepts(["json", "html"]) === "json";
+
+  return (
+    req.xhr ||
+    secFetchMode === "cors" ||
+    secFetchDest === "empty" ||
+    acceptsJson
+  );
+};
+
+const sendTelegramDestination = (req, res, url, destinationType) => {
+  if (shouldRespondWithJson(req)) {
+    return res.status(200).json({
+      status: "success",
+      destinationType,
+      telegramUrl: url,
+      redirectUrl: url,
+    });
+  }
+
+  return res.redirect(303, url);
+};
+
 exports.createVipInviteLink = catchAsync(async (req, res, next) => {
   const { courseId } = req.params;
   const userId = req.user?.id || null;
@@ -56,7 +82,7 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
       return next(new AppError("Telegram normal channel is not configured", 400));
     }
 
-    return res.redirect(303, normalLink);
+    return sendTelegramDestination(req, res, normalLink, "normal");
   }
 
   const [user, activeAnnualSubscription] = await Promise.all([
@@ -71,7 +97,7 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
       return next(new AppError("Telegram normal channel is not configured", 400));
     }
 
-    return res.redirect(303, normalLink);
+    return sendTelegramDestination(req, res, normalLink, "normal");
   }
 
   const isEnrolled = hasObjectId(user.enrolledCourses, courseId);
@@ -84,7 +110,7 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
       return next(new AppError("Telegram normal channel is not configured", 400));
     }
 
-    return res.redirect(303, normalLink);
+    return sendTelegramDestination(req, res, normalLink, "normal");
   }
 
   if (!telegram_bot_token) {
@@ -123,7 +149,12 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
   }).sort({ createdAt: -1 });
 
   if (activeInvite) {
-    return res.redirect(303, activeInvite.inviteLink);
+    return sendTelegramDestination(
+      req,
+      res,
+      activeInvite.inviteLink,
+      "vip",
+    );
   }
 
   const { expiresAt, expireDateUnix } = buildExpiryDate();
@@ -167,5 +198,5 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
     state: "link_issued",
   });
 
-  return res.redirect(303, inviteLink);
+  return sendTelegramDestination(req, res, inviteLink, "vip");
 });
