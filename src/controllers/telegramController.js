@@ -79,7 +79,9 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
     const normalLink = getCourseNormalTelegramLink(course);
 
     if (!normalLink) {
-      return next(new AppError("Telegram normal channel is not configured", 400));
+      return next(
+        new AppError("Telegram normal channel is not configured", 400),
+      );
     }
 
     return sendTelegramDestination(req, res, normalLink, "normal");
@@ -94,7 +96,9 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
     const normalLink = getCourseNormalTelegramLink(course);
 
     if (!normalLink) {
-      return next(new AppError("Telegram normal channel is not configured", 400));
+      return next(
+        new AppError("Telegram normal channel is not configured", 400),
+      );
     }
 
     return sendTelegramDestination(req, res, normalLink, "normal");
@@ -107,7 +111,9 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
     const normalLink = getCourseNormalTelegramLink(course);
 
     if (!normalLink) {
-      return next(new AppError("Telegram normal channel is not configured", 400));
+      return next(
+        new AppError("Telegram normal channel is not configured", 400),
+      );
     }
 
     return sendTelegramDestination(req, res, normalLink, "normal");
@@ -141,21 +147,21 @@ exports.createVipInviteLink = catchAsync(async (req, res, next) => {
     },
   );
 
-  const activeInvite = await TelegramVipAccess.findOne({
-    user: userId,
-    course: courseId,
-    state: "link_issued",
-    inviteLinkExpiresAt: { $gt: now },
-  }).sort({ createdAt: -1 });
-
-  if (activeInvite) {
-    return sendTelegramDestination(
-      req,
-      res,
-      activeInvite.inviteLink,
-      "vip",
-    );
-  }
+  // When member_limit is 1, Telegram makes the invite invalid after the first join.
+  // Do not reuse any still-active invite link; always generate a fresh one.
+  await TelegramVipAccess.updateMany(
+    {
+      user: userId,
+      course: courseId,
+      state: "link_issued",
+      inviteLinkExpiresAt: { $gt: now },
+    },
+    {
+      $set: {
+        state: "revoked",
+      },
+    },
+  );
 
   const { expiresAt, expireDateUnix } = buildExpiryDate();
 
