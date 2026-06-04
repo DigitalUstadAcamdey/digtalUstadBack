@@ -1,5 +1,6 @@
 const User = require("../models/userModel");
 const Course = require("../models/courseModel");
+const Subscription = require("../models/subscriptionModel");
 const AppSetting = require("../models/appSettingModel");
 
 const catchAsync = require("../utils/catchAsync");
@@ -16,6 +17,10 @@ exports.getAnalytics = catchAsync(async (req, res, next) => {
     role: "teacher",
   });
   const allCourses = await Course.countDocuments();
+  const annualSubscribers = await Subscription.countDocuments({
+    status: "active",
+    endDate: { $gt: new Date() },
+  });
   const courses = await Course.find().select("price studentsCount").exec();
 
   const totalRevenue = courses.reduce((sum, course) => {
@@ -34,6 +39,7 @@ exports.getAnalytics = catchAsync(async (req, res, next) => {
     users: allUsers,
     courses: allCourses,
     teachers,
+    annualSubscribers,
     totalRevenue,
     totalEnrollments,
     topCourse,
