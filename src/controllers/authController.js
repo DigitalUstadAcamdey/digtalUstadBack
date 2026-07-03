@@ -15,7 +15,7 @@ const cookieOptions = {
   secure: process.env.NODE_ENV === "production",
   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   maxAge: 24 * 60 * 60 * 1000 * 30, // 1month
-  domain: process.env.COOKIE_DOMAIN || "localhost",
+  domain: process.env.COOKIE_DOMAIN || ".digitalustadacademy.com",
   path: "/",
 };
 //upload img for users
@@ -223,7 +223,7 @@ exports.logout = catchAsync(async (req, res, next) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production" ? true : false,
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    domain: process.env.COOKIE_DOMAIN || "localhost", // ✅ يخلي الكوكي مشترك بين الـ subdomain
+    domain: process.env.COOKIE_DOMAIN || ".digitalustadacademy.com", // ✅ يخلي الكوكي مشترك بين الـ subdomain
     path: "/",
     expires: new Date(0), // منتهي الصلاحية
   });
@@ -275,7 +275,7 @@ exports.logoutSession = catchAsync(async (req, res, next) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production" ? true : false,
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      domain: process.env.COOKIE_DOMAIN || "localhost",
+      domain: process.env.COOKIE_DOMAIN || ".digitalustadacademy.com",
       path: "/",
       expires: new Date(0),
     });
@@ -296,7 +296,7 @@ exports.logoutAllSessions = catchAsync(async (req, res, next) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production" ? true : false,
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    domain: process.env.COOKIE_DOMAIN || "localhost",
+    domain: process.env.COOKIE_DOMAIN || ".digitalustadacademy.com",
     path: "/",
     expires: new Date(0),
   });
@@ -352,14 +352,14 @@ exports.resendVerificationEmail = catchAsync(async (req, res, next) => {
 const client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  (process.env.API_URL || "http://localhost:5000") + "/api/auth/google/callback"
+  (process.env.API_URL || "https://api.digitalustadacademy.com") + "/api/auth/google/callback"
 );
 
 const getSafeFrontendCallbackUrl = (req) => {
   const candidate =
     req.query?.callbackUrl || req.query?.redirect || req.query?.frontendUrl;
 
-  const fallbackUrl = (process.env.FRONTEND_URL || "http://localhost:3000") + "/auth/callback";
+  const fallbackUrl = (process.env.FRONTEND_URL || "https://www.digitalustadacademy.com") + "/auth/callback";
 
   if (!candidate || typeof candidate !== "string") {
     return fallbackUrl;
@@ -367,7 +367,7 @@ const getSafeFrontendCallbackUrl = (req) => {
 
   try {
     const parsed = new URL(candidate);
-    const safeHostPattern = new RegExp(`(^|\\\\.)${(process.env.FRONTEND_DOMAIN || 'localhost').replace(/\\./g, '\\\\.')}$`, 'i');
+    const safeHostPattern = new RegExp(`(^|\\\\.)${(process.env.FRONTEND_DOMAIN || 'digitalustadacademy.com').replace(/\\./g, '\\\\.')}$`, 'i');
 
     if (parsed.protocol === "https:" && safeHostPattern.test(parsed.hostname)) {
       return parsed.toString();
@@ -395,7 +395,7 @@ exports.redirectGoogle = catchAsync(async (req, res, next) => {
 
 exports.loginWithGoogle = catchAsync(async (req, res, next) => {
   const code = req.query.code;
-  let frontendCallback = (process.env.FRONTEND_URL || "http://localhost:3000") + "/auth/callback";
+  let frontendCallback = (process.env.FRONTEND_URL || "https://www.digitalustadacademy.com") + "/auth/callback";
 
   if (!code) {
     return next(new AppError("Authorization code is missing", 400));
@@ -486,7 +486,7 @@ exports.loginWithGoogle = catchAsync(async (req, res, next) => {
         const parsed = new URL(stateCallback);
         if (
           parsed.protocol === "https:" &&
-          new RegExp(`(^|\\\\.)${(process.env.FRONTEND_DOMAIN || 'localhost').replace(/\\./g, '\\\\.')}$`, 'i').test(parsed.hostname)
+          new RegExp(`(^|\\\\.)${(process.env.FRONTEND_DOMAIN || 'digitalustadacademy.com').replace(/\\./g, '\\\\.')}$`, 'i').test(parsed.hostname)
         ) {
           frontendCallback = parsed.toString();
         }
@@ -617,7 +617,7 @@ exports.forgetPassword = catchAsync(async (req, res, next) => {
   user.createPasswordResetToken();
   await user.save({ validateBeforeSave: false });
 
-  const resetLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password/${user.resetPasswordToken}`;
+  const resetLink = `${process.env.FRONTEND_URL || "https://www.digitalustadacademy.com"}/reset-password/${user.resetPasswordToken}`;
 
   try {
     await new Email(user, resetLink).resetPassword();
