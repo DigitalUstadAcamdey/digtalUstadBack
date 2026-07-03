@@ -36,11 +36,12 @@ const normalizeOrigin = (origin = "") =>
 const allowedOrigins = [
   "http://localhost:3000",
   "https://e-learning-platform-eosin.vercel.app",
-  "https://www.digitalustadacademy.com",
-  "https://digitalustadacademy.com",
   "https://quiet-bats-tap.loca.lt",
   "https://1686134b9a15.ngrok-free.app",
 ];
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
 
 const allowedOriginsSet = new Set(allowedOrigins.map(normalizeOrigin));
 
@@ -51,10 +52,13 @@ const isAllowedOrigin = (origin) => {
 
   if (allowedOriginsSet.has(normalized)) return true;
 
-  // Allow all HTTPS subdomains of digitalustadacademy.com in production.
-  return /^https:\/\/([a-z0-9-]+\.)?digitalustadacademy\.com$/i.test(
-    normalized,
-  );
+  if (process.env.FRONTEND_DOMAIN) {
+    const safeDomain = process.env.FRONTEND_DOMAIN.replace(/\./g, '\\.');
+    const regex = new RegExp(`^https?://([a-z0-9-]+\\.)?${safeDomain}$`, 'i');
+    if (regex.test(normalized)) return true;
+  }
+  
+  return false;
 };
 
 const corsOptions = {

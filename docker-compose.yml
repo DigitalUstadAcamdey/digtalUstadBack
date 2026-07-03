@@ -9,7 +9,7 @@ services:
       target: production
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.digitalustad.rule=Host(`api.digitalustadacademy.com`)" # replace the api.localhost with my domain name 'api.digitalustadacaedmy.com' , the HostRegexp(`{any:.*}`) for running ngrok app
+      - "traefik.http.routers.digitalustad.rule=Host(`${API_DOMAIN}`)"
       - "traefik.http.services.digitalustad.loadbalancer.server.port=5000"
       - "traefik.http.routers.digitalustad.entrypoints=websecure"
       - "traefik.http.routers.digitalustad.tls=true"
@@ -43,7 +43,7 @@ services:
       - "--serversTransport.forwardingTimeouts.idleConnTimeout=600s"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.letsencrypt.acme.email=contact@digitalustadacademy.com"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       # selef certificate
       # - "--certificatesresolvers.selfsigned.acme.tlschallenge=true"
