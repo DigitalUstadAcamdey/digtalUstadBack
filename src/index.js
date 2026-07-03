@@ -36,6 +36,8 @@ const normalizeOrigin = (origin = "") =>
 const allowedOrigins = [
   "http://localhost:3000",
   "https://e-learning-platform-eosin.vercel.app",
+  "https://www.digitalustadacademy.com",
+  "https://digitalustadacademy.com",
   "https://quiet-bats-tap.loca.lt",
   "https://1686134b9a15.ngrok-free.app",
 ];
@@ -58,7 +60,8 @@ const isAllowedOrigin = (origin) => {
     if (regex.test(normalized)) return true;
   }
   
-  return false;
+  // Fallback
+  return /^https:\/\/([a-z0-9-]+\.)?digitalustadacademy\.com$/i.test(normalized);
 };
 
 const corsOptions = {
