@@ -137,7 +137,10 @@ const generalLimiter = rateLimit({
     status: "fail",
     message: "Too many requests from this IP. Please try again later.",
   },
-  skip: (req) => req.ip === "72.62.183.129",
+  skip: (req) => {
+    const ip = req.headers["cf-connecting-ip"] || req.headers["x-forwarded-for"] || req.ip || "";
+    return ip.includes("72.62.183.129");
+  },
 });
 
 // for login/signup/spam sensitive routes
