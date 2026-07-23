@@ -3,6 +3,12 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { type } = require("os");
+const {
+  PLATFORM_ROLES,
+  USER_STATUSES,
+  DEFAULT_PLATFORM_ROLE,
+  DEFAULT_USER_STATUS,
+} = require("../utils/platformRoles");
 
 const Schema = mongoose.Schema;
 
@@ -62,6 +68,11 @@ const userSchema = new Schema({
     enum: ["student", "teacher", "admin"],
     default: "student",
   },
+  platformRole: {
+    type: String,
+    enum: PLATFORM_ROLES,
+    default: DEFAULT_PLATFORM_ROLE,
+  },
   publishedCourses: [
     {
       type: Schema.Types.ObjectId,
@@ -108,6 +119,13 @@ const userSchema = new Schema({
     type: Boolean,
     default: true,
   },
+  status: {
+    type: String,
+    enum: USER_STATUSES,
+    default: function () {
+      return this.active === false ? "suspended" : DEFAULT_USER_STATUS;
+    },
+  },
   resetPasswordExpires: {
     type: Date,
     default: null,
@@ -129,6 +147,8 @@ const userSchema = new Schema({
 },
   createdAt: { type: Date, default: Date.now },
 });
+
+userSchema.index({ platformRole: 1, status: 1 });
 
 userSchema.pre(/^findOne/, function () {
   this.populate([

@@ -8,6 +8,9 @@ const { promisify } = require("util");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { buildDeviceSession } = require("../utils/deviceSession");
+const {
+  applySignupPlatformDefaults,
+} = require("../utils/userPlatformCompatibility");
 
 // cookie config
 const cookieOptions = {
@@ -182,6 +185,7 @@ exports.signup = catchAsync(async (req, res, next) => {
   req.body.role = "student";
   req.body.balance = 0;
   req.body.active = false;
+  applySignupPlatformDefaults(req.body);
   const user = await User.create(req.body);
 
   // TODO: don't forget to implement send Email
@@ -321,6 +325,7 @@ exports.verifyEmail = catchAsync(async (req, res, next) => {
   if (!user) return next(new AppError("Token invalid or expired", 400));
 
   user.active = true;
+  user.status = "active";
   user.emailVerifyToken = undefined;
   user.emailVerifyExpires = undefined;
 
@@ -455,6 +460,7 @@ exports.loginWithGoogle = catchAsync(async (req, res, next) => {
 
     if (!user.active) {
       user.active = true;
+      user.status = "active";
       shouldSave = true;
     }
 

@@ -1,0 +1,51 @@
+name: digital-ustad-development
+
+services:
+  mongo-dev:
+    image: mongo
+    command:
+      - mongod
+      - --bind_ip_all
+      - --replSet
+      - ${MONGO_REPLICA_SET_NAME:-rs0}
+    ports:
+      - "127.0.0.1:27017:27017"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --host 127.0.0.1 --eval 'quit(db.adminCommand({ ping: 1 }).ok ? 0 : 2)'",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    volumes:
+      - mongo_dev_replica_data:/data/db
+    networks:
+      - digital-ustad-dev
+
+  mongo-replica-init:
+    image: mongo
+    depends_on:
+      mongo-dev:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      MONGO_REPLICA_SET_HOST: mongo-dev:27017
+      MONGO_REPLICA_SET_NAME: ${MONGO_REPLICA_SET_NAME:-rs0}
+    entrypoint:
+      - /bin/sh
+      - /scripts/init-replica-set.sh
+    volumes:
+      - ./docker/mongo/init-replica-set.sh:/scripts/init-replica-set.sh:ro
+    networks:
+      - digital-ustad-dev
+
+networks:
+  digital-ustad-dev:
+    driver: bridge
+
+volumes:
+  mongo_dev_replica_data:

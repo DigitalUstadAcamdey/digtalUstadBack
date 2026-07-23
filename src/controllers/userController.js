@@ -11,6 +11,12 @@ const {
   buildAnnualSubscriptionAccess,
   findActiveAnnualSubscription,
 } = require("../utils/subscriptionAccess");
+const {
+  forceDefaultPlatformRole,
+  containsProtectedSelfServicePlatformField,
+  containsPlatformRoleField,
+  normalizeLegacyAccountStatusUpdate,
+} = require("../utils/userPlatformCompatibility");
 
 // upload files
 const multerStorage = multer.memoryStorage();
@@ -80,6 +86,7 @@ exports.uploadUserThumbnail = catchAsync(async (req, res, next) => {
 exports.updateMe = catchAsync(async (req, res, next) => {
   if (
     req.body.role ||
+    containsProtectedSelfServicePlatformField(req.body) ||
     req.body.password ||
     req.body.progress ||
     req.body.enrolledCourses ||
@@ -103,6 +110,7 @@ exports.deleteMe = catchAsync(async (req, res, next) => {
     req.user.id,
     {
       active: false,
+      status: "deleted",
     },
     {
       new: true,
@@ -203,6 +211,7 @@ exports.getUser = catchAsync(async (req, res, next) => {
 });
 
 exports.createUser = catchAsync(async (req, res, next) => {
+  forceDefaultPlatformRole(req.body);
   const newUser = await User.create(req.body);
   res.status(201).json({
     message: "تم التسجيل بنجاح",
@@ -266,7 +275,18 @@ exports.searchUsers = catchAsync(async (req, res, next) => {
 });
 
 exports.UpdateStatusUser = catchAsync(async (req, res, next) => {
-  const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+  if (containsPlatformRoleField(req.body)) {
+    return next(
+      new AppError(
+        "This endpoint cannot change the platform role.",
+        400,
+      ),
+    );
+  }
+
+  const updates = normalizeLegacyAccountStatusUpdate(req.body);
+
+  const user = await User.findByIdAndUpdate(req.params.id, updates, {
     new: true,
     runValidators: true,
   });
